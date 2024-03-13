@@ -101,6 +101,8 @@ class ReconLoss(nn.Module):
         
         y, pred = y.detach().cpu().numpy(), pred.detach().cpu().numpy()
         return roc_auc_score(y, pred), average_precision_score(y, pred)
+    
+
 
 
 class VGAEloss(ReconLoss):
