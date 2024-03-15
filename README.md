@@ -114,7 +114,12 @@ python dtdg_edgebank.py -d enron -t monthly --mem_mode fixed_time_window
 use `--wandb` to turn on tracking with wandb
 
 ```
-python ctdg_main_htgn.py --model=HTGN --dataset=tgbl-wiki -t hourly --lr 0.0001 --max_epoch 100
+python ctdg_main_htgn.py --model=HTGN --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 200 --num_runs 5 --patience 50
+
+python ctdg_main_htgn.py --model=HTGN --dataset=tgbl-review -t monthly --lr 0.001 --max_epoch 200 --num_runs 5 --patience 50
+
+python ctdg_main_htgn.py --model=HTGN --dataset=tgbl-coin -t hourly --lr 0.001 --max_epoch 200 --num_runs 5 --patience 50
+
 ```
 
 ## Generate negative samples for discrete datasets
