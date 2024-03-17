@@ -11,6 +11,7 @@ __pycache__/
 *.txt
 # C extensions
 *.so
+wandb/
 
 
 # Distribution / packaging

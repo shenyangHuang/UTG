@@ -145,6 +145,7 @@ class Runner(object):
     def run(self, seed=1):
         set_random(seed)
         optimizer = self.optimizer()  # @TODO: RiemannianAdam or Adam?!
+        self.model.reset_parameters()
         self.model.train()
 
         best_val = 0 
