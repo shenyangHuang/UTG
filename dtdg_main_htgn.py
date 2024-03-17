@@ -134,6 +134,7 @@ class Runner(object):
             prev_index = test_snapshots[snapshot_idx]
             prev_index = prev_index.long().to(args.device)
             z = self.model(prev_index, self.x)
+            # embeddings = z.detach()
             embeddings = self.model.update_hiddens_all_with(z)
 
         result = list(perf_list.values())
@@ -147,6 +148,8 @@ class Runner(object):
         optimizer = self.optimizer()  # @TODO: RiemannianAdam or Adam?!
         self.model.reset_parameters()
         self.model.train()
+
+        self.model = load_model(args).to(args.device)
 
         best_val = 0 
         best_test = 0
@@ -203,8 +206,8 @@ class Runner(object):
                 #* update the embedding after the prediction of current snapshot
                 pos_index = snapshot_list[snapshot_idx]
                 pos_index = pos_index.long().to(args.device)
-                z = self.model(pos_index, self.x)
-                self.model.update_hiddens_all_with(z)
+                z = self.model(pos_index, self.x) 
+                self.model.update_hiddens_all_with(z) 
             
             average_epoch_loss = np.mean(epoch_losses)
             train_end_time = timeit.default_timer()
