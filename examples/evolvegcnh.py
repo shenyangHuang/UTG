@@ -73,7 +73,7 @@ class LinkPredictor(torch.nn.Module):
         
 def test_step(data, neg_sampler, evaluator, metric, split_mode):
     """
-    TGB evaluation/inference for DTDGs
+    DTDG inference step
     """
     model.eval()
     decoder.eval()
