@@ -9,7 +9,7 @@ parser.add_argument('-d', '--dataset', type=str, default='enron10', help='datase
 parser.add_argument('--data_pt_path', type=str, default='', help='need to be modified')
 parser.add_argument('--num_nodes', type=int, default=-1, help='num of nodes')
 parser.add_argument('--nfeat', type=int, default=128, help='dim of input feature')
-parser.add_argument('-t', '--time_scale', type=str, default='month', help='Time scale to discretize a TGB dataset.',
+parser.add_argument('-t', '--time_scale', type=str, default='hourly', help='Time scale to discretize a TGB dataset.',
                     choices=['minutely', 'hourly', 'daily', 'weekly', 'monthly', 'yearly', 'biyearly'])
 parser.add_argument("--wandb", action="store_true", default=False, help="now using wandb")
 parser.add_argument('--num_runs', type=int, default=1, help='number of runs')
