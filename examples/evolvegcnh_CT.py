@@ -14,8 +14,8 @@ from pathlib import Path
 import sys
 import argparse
 from torch_geometric.utils import negative_sampling
+from tgb.linkproppred.dataset import LinkPropPredDataset
 from tgb.linkproppred.evaluate import Evaluator
-from tgb.linkproppred.negative_sampler import NegativeEdgeSampler
 
 
 
@@ -71,58 +71,50 @@ class LinkPredictor(torch.nn.Module):
 
         
         
-def test_step(data, neg_sampler, evaluator, metric, split_mode):
+def test_step(full_data, masks, neg_sampler, evaluator, metric, split_mode, x=None):
     """
     DTDG inference step
     """
     model.eval()
     decoder.eval()
     
-    perf_list = []
+    perf_list = np.zeros(full_data['sources'][masks].shape[0])
+    perf_idx = 0
     edge_weight = None  # TODO: edge_features should be loaded!
     
-    snapshot_list = data['edge_index']  # undirected with no self loop
-    # test_edges = test_data['original_edges']  # TODO: original edges unmodified
-    
-    for snapshot_idx in snapshot_list.keys():
+    for pos_src, pos_dst, pos_t in zip(full_data['sources'][masks],
+                                       full_data['destinations'][masks],
+                                       full_data['timestamps'][masks]):
         
-        pos_e_index = snapshot_list[snapshot_idx]
-        pos_e_index = pos_e_index.long().to(args.device)
-        
-        pos_src = np.array(pos_e_index[:, 0])
-        pos_dst = np.array(pos_e_index[:, 1])
-        pos_ts = np.array([int(snapshot_idx) for _ in range(pos_src.shape[0])])
-        
-        # load negative samples
-        neg_batch_list = neg_sampler.query_batch(pos_src, pos_dst, pos_ts, split_mode=split_mode)
+        neg_batch_list = neg_sampler.query_batch(np.array([pos_src]), 
+                                                 np.array([pos_dst]), 
+                                                 np.array([pos_t]), 
+                                                 split_mode=split_mode)
         
         for neg_idx, neg_batch in enumerate(neg_batch_list):
-            src = torch.full((1 + len(neg_batch),), pos_src[neg_idx], device=args.device)
-            dst = torch.tensor(
-                np.concatenate(
-                    ([np.array([pos_dst.cpu().numpy()[neg_idx]]), np.array(neg_batch)]),
-                    axis=0,
-                ),
-                device=args.device,
-            )
-            edge_index = torch.stack((src, dst), dim=0)
+            query_src = np.array([int(pos_src) for _ in range(len(neg_batch) + 1)])
+            query_dst = np.concatenate([np.array([int(pos_dst)]), neg_batch])
+            query_src = torch.from_numpy(query_src).long().to(args.device)
+            query_dst = torch.from_numpy(query_dst).long().to(args.device)
+            edge_index = torch.stack((query_src, query_dst), dim=0)
             
             z = model(x=x, edge_index=edge_index, edge_weight=edge_weight)
             y_pred = decoder(z[edge_index[:, 0]], z[edge_index[:, 1]])
             
             input_dict = {
-                "y_pred_pos": np.array([y_pred[0]]),
-                "y_pred_neg": np.array(y_pred[1:]),
+                "y_pred_pos": y_pred[0].detach().cpu().numpy(),
+                "y_pred_neg": y_pred[1:].detach().cpu().numpy(),
                 "eval_metric": [metric],
                 }
-            perf_list.append(evaluator.eval(input_dict)[metric])
+            perf_list[perf_idx] = evaluator.eval(input_dict)[metric]
+            perf_idx += 1
             
-    perf_metric = float(np.mean(np.array(perf_list)))
+    perf_metric = float(np.mean(perf_list))
     
     return perf_metric
 
 
-def train_step(data):
+def train_step(data, x=None):
     r"""
     DTDG train step 
     """
@@ -133,7 +125,7 @@ def train_step(data):
     snapshot_list = data['edge_index']
     total_loss = 0 
     
-    for snapshot_idx in snapshot_list.keys():
+    for snapshot_idx in range(data['time_length']):
         
         pos_index = snapshot_list[snapshot_idx]
         pos_index = pos_index.long().to(args.device)
@@ -165,23 +157,33 @@ if __name__ == '__main__':
     from utils.data_util import loader
 
     set_random(args.seed)
-
-    args.device = 'cpu'  # TODO: for debugging purpose!
-    
-    data = loader(dataset=args.dataset, time_scale=args.time_scale)  # TODO: this should load `edge_feat` as well (which is provided by TGB)
-    train_data = data['train_data']
-    val_data = data['val_data']
-    test_data = data['test_data']
-    args.num_nodes = data['train_data']['num_nodes']
     
     # set initial features
     HID_DIM = EMB_DIM = args.nfeat  # default value for `nfeat`
-    x = torch.rand(args.num_nodes, args.nfeat).to(args.device)  # TODO: should load initial node features
     
-    # set-up the embedding model
+    # Data Loadings --- TGB
+    dataset_tgb = LinkPropPredDataset(name=args.dataset)
+    full_data = dataset_tgb.full_data  
+    metric = dataset_tgb.eval_metric
+    neg_sampler = dataset_tgb.negative_sampler
+    val_mask = dataset_tgb.val_mask
+    test_mask = dataset_tgb.test_mask
+    # set TGB evaluator
+    evaluator = Evaluator(name=args.dataset)
+    
+    # loading with innate loader
+    data = loader(dataset=args.dataset, time_scale=args.time_scale)
+    train_data = data['train_data']
+    val_data = data['val_data']
+    test_data = data['test_data']
+    args.num_nodes = int(1.1 * train_data['num_nodes'])  # allocate larger than training set to accomodate inductive nodes
+    
+    x = torch.rand(args.num_nodes, args.nfeat).to(args.device)  # TODO: should load initial node features!
+    
+    # set the embedding model
     model = RecurrentGCN(node_count=args.num_nodes, node_features=args.nfeat, hid_dim=HID_DIM).to(args.device)
     
-    # set-up the decoder
+    # set the decoder
     decoder = LinkPredictor(in_channels=EMB_DIM).to(args.device)
     
     # set optimizer
@@ -189,16 +191,6 @@ if __name__ == '__main__':
     
     # set the loss
     criterion = torch.nn.BCEWithLogitsLoss()
-    
-    # set TGB evaluator
-    evaluator = Evaluator(name=args.dataset)
-    metric = "mrr"  # Link Property Prediction
-    neg_sampler = NegativeEdgeSampler(dataset_name=args.dataset, strategy="hist_rnd")  # default TGB setting
-    discrete_ns_partial_path = f'{BASE_DIR}/data/ns_discrete/{args.dataset}'
-    neg_sampler.load_eval_set(fname=f"{discrete_ns_partial_path}/{args.dataset}_val_ns_" + args.time_scale + ".pkl", 
-                                  split_mode="val")
-    neg_sampler.load_eval_set(fname=f"{discrete_ns_partial_path}/{args.dataset}_test_ns_" + args.time_scale + ".pkl", 
-                                  split_mode="test")
     
     # -----------------
     # -----------------
@@ -208,15 +200,17 @@ if __name__ == '__main__':
         # =======================
         # ======== Train ========
         # =======================
-        epoch_start_train = timeit.default_timer()
-        loss = train_step(train_data)
-        print(f"Epoch: {epoch:02d}, Loss: {loss: .4f}, Training elapsed Time (s): {timeit.default_timer() - epoch_start_train: .4f}")
+        epoch_start_time = timeit.default_timer()
+        loss = train_step(train_data, x)
+        print(f"Epoch: {epoch:02d}, Loss: {loss: .4f}, Training elapsed Time (s): {timeit.default_timer() - epoch_start_time: .4f}")
         
         # ============================
         # ======== Validation ========
         # ============================
         start_val = timeit.default_timer()
-        perf_metric_val = test_step(val_data, neg_sampler, evaluator, metric, split_mode="val")
+        dataset_tgb.load_val_ns()
+        perf_metric_val = test_step(full_data, val_mask, neg_sampler, evaluator, 
+                                    metric, split_mode="val", x=x)
         
         print(f"\tValidation {metric}: {perf_metric_val: .4f}")
         print(f"\tValidation: Elapsed time (s): {timeit.default_timer() - start_val: .4f}")
@@ -225,13 +219,15 @@ if __name__ == '__main__':
         # ======== Test ==============
         # ============================
         start_test = timeit.default_timer()
-        perf_metric_val = test_step(test_data, neg_sampler, evaluator, metric, split_mode="test")
+        dataset_tgb.load_test_ns()
+        perf_metric_val = test_step(full_data, test_mask, neg_sampler, evaluator, 
+                                    metric, split_mode="test", x=x)
         
         print(f"\tTest {metric}: {perf_metric_val: .4f}")
         print(f"\tTest: Elapsed time (s): {timeit.default_timer() - start_test: .4f}")
         
         print("-"*30)
-        print(f"Epoch: {epoch:02d}, Total elapsed time (s): {timeit.default_timer() - epoch_start_train: .4f}")
+        print(f"Epoch: {epoch:02d}, Total elapsed time (s): {timeit.default_timer() - epoch_start_time: .4f}")
         print("="*50)
     
     
