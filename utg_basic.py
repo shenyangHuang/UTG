@@ -32,9 +32,9 @@ def run(args, data, seed=1):
     set_random(seed)
     batch_size = 50
     
-    time_encoder = TimeEncoder(time_dim=args.time_dim)
-    encoder = GCN(in_channels=data.num_features, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout)
-    decoder = TimeProjDecoder(in_channels=args.hidden_channels, hidden_channels=args.hidden_channels, out_channels=1, num_layers=args.num_layers, dropout=args.dropout)
+    time_encoder = TimeEncoder(out_channels=args.time_dim)
+    encoder = GCN(in_channels=args.num_feat, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout)
+    decoder = TimeProjDecoder(in_channels=args.hidden_channels, time_dim=args.time_dim, hidden_channels=args.hidden_channels, out_channels=1, num_layers=args.num_layers, dropout=args.dropout)
 
     optimizer = optim.Adam(set(time_encoder.parameters())|set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
     criterion = torch.nn.BCEWithLogitsLoss()
@@ -47,7 +47,7 @@ def run(args, data, seed=1):
 
     #! set up node features
     node_feat = None
-    min_dst_idx, max_dst_idx = int(data.dst.min()), int(data.dst.max())
+    
 
 
 
@@ -57,6 +57,7 @@ def run(args, data, seed=1):
     metric = dataset.eval_metric
     neg_sampler = dataset.negative_sampler
     evaluator = Evaluator(name=args.dataset)
+    min_dst_idx, max_dst_idx = int(full_data.dst.min()), int(full_data.dst.max())
 
 
     #get masks
@@ -141,6 +142,10 @@ if __name__ == '__main__':
 
     set_random(args.seed)
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
+    args.time_dim = 32
+    args.hidden_channels = 128
+    args.num_layers = 2
+    args.num_feat = args.nfeat #128
 
     for seed in range(args.seed, args.seed + args.num_runs):
         print ("--------------------------------")
