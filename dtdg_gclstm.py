@@ -6,6 +6,8 @@ from torch_geometric.utils.negative_sampling import negative_sampling
 # from models.tgn.decoder import LinkPredictor
 from tgb.linkproppred.evaluate import Evaluator
 from tgb.linkproppred.negative_sampler import NegativeEdgeSampler
+import wandb
+import timeit
 
 
 
@@ -68,7 +70,19 @@ if __name__ == '__main__':
     set_random(args.seed)
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
 
-
+    if args.wandb:
+        wandb.init(
+            # set the wandb project where this run will be logged
+            project="utg",
+            
+            # track hyperparameters and run metadata
+            config={
+            "learning_rate": args.lr,
+            "architecture": "gclstm",
+            "dataset": args.dataset,
+            "time granularity": args.time_scale,
+            }
+        )
     #! add support for node features in the future
     #node_feat_dim = 16 #all 0s for now
     node_feat_dim = 256 #for node features
@@ -98,6 +112,7 @@ if __name__ == '__main__':
     criterion = torch.nn.MSELoss()
 
     for epoch in range(num_epochs):
+        train_start_time = timeit.default_timer()
         optimizer.zero_grad()
         total_loss = 0
         model.train()
@@ -160,8 +175,11 @@ if __name__ == '__main__':
 
         print (f'Epoch {epoch}/{num_epochs}, Loss: {total_loss/num_nodes}')
 
+        train_time = timeit.default_timer() - train_start_time
         #! Evaluation starts here
         #! need to optimize code to have train, test function, maybe in a class
+
+        val_start_time = timeit.default_timer()
         model.eval()
         link_pred.eval()
         evaluator = Evaluator(name="tgbl-wiki") #reuse MRR evaluator from TGB
@@ -226,8 +244,16 @@ if __name__ == '__main__':
         result = list(perf_list.values())
         perf_list = np.array(result)
         perf_metrics = float(np.mean(perf_list))
+        val_time = timeit.default_timer() - val_start_time
 
         print(f"Epoch {epoch} : Val {metric}: {perf_metrics}")
+        if (args.wandb):
+            wandb.log({"train_loss":(total_loss/num_nodes),
+                    "val_" + metric: perf_metrics,
+                    "train time": train_time,
+                    "val time": val_time,
+                    })
+
 
 
 
