@@ -1,5 +1,25 @@
 import torch
 import torch.nn.functional as F
+from torch.nn import Linear
+
+
+class SimpleLinkPredictor(torch.nn.Module):
+    """
+    Reference:
+    - https://github.com/pyg-team/pytorch_geometric/blob/master/examples/tgn.py
+    """
+
+    def __init__(self, in_channels):
+        super().__init__()
+        self.lin_src = Linear(in_channels, in_channels)
+        self.lin_dst = Linear(in_channels, in_channels)
+        self.lin_final = Linear(in_channels, 1)
+
+    def forward(self, z_src, z_dst):
+        h = self.lin_src(z_src) + self.lin_dst(z_dst)
+        h = h.relu()
+        return self.lin_final(h).sigmoid()
+
 
 
 """
@@ -28,7 +48,7 @@ class TimeProjDecoder(torch.nn.Module):
         super(TimeProjDecoder, self).__init__()
 
         self.lins = torch.nn.ModuleList()
-        self.lins.append(torch.nn.Linear(in_channels + time_dim, hidden_channels))
+        self.lins.append(torch.nn.Linear(in_channels+time_dim, hidden_channels))
         for _ in range(num_layers - 2):
             self.lins.append(torch.nn.Linear(hidden_channels, hidden_channels))
         self.lins.append(torch.nn.Linear(hidden_channels, out_channels))

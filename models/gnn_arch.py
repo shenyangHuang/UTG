@@ -32,9 +32,7 @@ class GCN(torch.nn.Module):
     """
     make node feature optional
     """
-    def forward(self, adj_t, x=None):
-        if x is None:
-            x = torch.ones((adj_t.size(0), self.in_channels), device=adj_t.device)
+    def forward(self, adj_t, x):
         for i, conv in enumerate(self.convs[:-1]):
             x = conv(x, adj_t)
             x = self.bns[i](x)
