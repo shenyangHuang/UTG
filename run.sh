@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --partition=long #unkillable #main #long
-#SBATCH --output=utg_gnn_wiki_lr001.txt 
-#SBATCH --error=utg_gnn_wiki_lr001_error.txt 
+#SBATCH --output=utg_time_wiki_lr001.txt 
+#SBATCH --error=utg_time_wiki_lr001_error.txt 
 #SBATCH --cpus-per-task=4                     # Ask for 4 CPUs
 #SBATCH --gres=gpu:1                  # Ask for 1 titan xp gpu:rtx8000:1 
-#SBATCH --mem=64G #64G                             # Ask for 32 GB of RAM
+#SBATCH --mem=32G #64G                             # Ask for 32 GB of RAM
 #SBATCH --time=72:00:00    #48:00:00                   # The job will run for 1 day
 
 export HOME="/home/mila/h/huangshe"
@@ -14,7 +14,10 @@ pwd
 
 #* for utg 
 
-CUDA_VISIBLE_DEVICES=0 python -u utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 500 --num_runs 1 --patience 100 --wandb
+CUDA_VISIBLE_DEVICES=0 python -u utg_main_gnn_time.py --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 500 --num_runs 1 --patience 100 --wandb
+
+
+# CUDA_VISIBLE_DEVICES=0 python -u utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 500 --num_runs 1 --patience 100 --wandb
 
 
 

@@ -273,8 +273,8 @@ if __name__ == '__main__':
     set_random(args.seed)
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
     args.time_dim = 32
-    #args.hidden_channels = 128
-    args.hidden_channels = 64
+    args.hidden_channels = 128
+    # args.hidden_channels = 64
     args.num_layers = 2
 
     for seed in range(args.seed, args.seed + args.num_runs):
