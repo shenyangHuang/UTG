@@ -145,6 +145,7 @@ class Runner(object):
     def run(self, seed=1):
         set_random(seed)
         optimizer = self.optimizer()  # @TODO: RiemannianAdam or Adam?!
+        self.model.reset_parameters()
         self.model.train()
 
         best_val = 0 
@@ -179,21 +180,14 @@ class Runner(object):
                 #* generate random samples for training
                 neg_index = generate_random_negatives(pos_index, num_nodes=args.num_nodes, num_neg_samples=1)
 
-                """
-                #! here only positive edges should pass through the model
-                in original code, edge index only comes from positive edges thus neg index is not used
-                only the z are used for prediction
-                """
-                #edge_index = torch.cat((pos_index, neg_index), dim=1)
                 if (snapshot_idx == 0):
-                    edge_index = pos_index
-                    z = self.model(edge_index, self.x)
+                    z = self.model(pos_index, self.x)
                                
 
                 if args.use_htc == 0:
-                    epoch_loss = self.loss(z, pos_edge_index=edge_index,  neg_edge_index=neg_index)
+                    epoch_loss = self.loss(z, pos_edge_index=pos_index,  neg_edge_index=neg_index)
                 else:
-                    epoch_loss = self.loss(z, pos_edge_index=edge_index, neg_edge_index=neg_index) + self.model.htc(z)
+                    epoch_loss = self.loss(z, pos_edge_index=pos_index, neg_edge_index=neg_index) + self.model.htc(z)
                 
                 epoch_loss.backward()
                 optimizer.step()

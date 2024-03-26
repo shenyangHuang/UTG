@@ -130,6 +130,7 @@ class Runner(object):
                 pos_index = pos_index.long().to(args.device)
                 z = self.model(pos_index, self.x)
                 embeddings = self.model.update_hiddens_all_with(z)
+
                 if (ts_idx >= len(ts_list) - 1):
                     update = False
                 else:
@@ -165,6 +166,7 @@ class Runner(object):
         
         set_random(seed)
         optimizer = self.optimizer()  # @TODO: RiemannianAdam or Adam?!
+        self.model.reset_parameters()
         self.model.train()
 
         best_val = 0 
@@ -212,32 +214,23 @@ class Runner(object):
 
                 #* generate random samples for training
                 neg_index = generate_random_negatives(pos_index, num_nodes=args.num_nodes, num_neg_samples=1)
-
-                """
-                #! here only positive edges should pass through the model
-                in original code, edge index only comes from positive edges thus neg index is not used
-                only the z are used for prediction
-                """
-                #edge_index = torch.cat((pos_index, neg_index), dim=1)
                 if (snapshot_idx == 0):
-                    edge_index = pos_index
-                    z = self.model(edge_index, self.x)
+                    z = self.model(pos_index, self.x)
                                
-
                 if args.use_htc == 0:
-                    epoch_loss = self.loss(z, pos_edge_index=edge_index,  neg_edge_index=neg_index)
+                    epoch_loss = self.loss(z, pos_edge_index=pos_index,  neg_edge_index=neg_index)
                 else:
-                    epoch_loss = self.loss(z, pos_edge_index=edge_index, neg_edge_index=neg_index) + self.model.htc(z)
+                    epoch_loss = self.loss(z, pos_edge_index=pos_index, neg_edge_index=neg_index) + self.model.htc(z)
                 
                 epoch_loss.backward()
                 optimizer.step()
                 epoch_losses.append(epoch_loss.item())
 
-                #* update the embedding for the final train snapshot
+                #* update the embedding after the prediction
                 pos_index = snapshot_list[snapshot_idx]
                 pos_index = pos_index.long().to(args.device)
                 z = self.model(pos_index, self.x)
-                self.model.update_hiddens_all_with(z)
+                z = self.model.update_hiddens_all_with(z) 
             
             average_epoch_loss = np.mean(epoch_losses)
             train_end_time = timeit.default_timer()
