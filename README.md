@@ -124,6 +124,12 @@ python dtdg_gclstm.py --dataset contacts -t hourly --lr 0.001 --max_epoch 200 --
 
 ```
 
+5. UTG with basic GNN encoder and MLP decoder
+
+```
+python utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 0.001
+```
+
 
 
 ## Get Started with TGB Datasets
@@ -136,8 +142,6 @@ python ctdg_main_htgn.py --model=HTGN --dataset=tgbl-wiki -t hourly --lr 0.001 -
 python ctdg_main_htgn.py --model=HTGN --dataset=tgbl-review -t monthly --lr 0.001 --max_epoch 200 --num_runs 5 --patience 50
 
 python ctdg_main_htgn.py --model=HTGN --dataset=tgbl-coin -t hourly --lr 0.001 --max_epoch 200 --num_runs 5 --patience 50
-
-python utg_basic.py --model=HTGN --dataset=tgbl-wiki -t hourly --lr 0.0001
 
 ```
 

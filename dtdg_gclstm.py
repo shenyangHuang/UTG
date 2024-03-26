@@ -339,6 +339,12 @@ if __name__ == '__main__':
                     print ("------------------------------------------")
                     break
                 best_epoch = epoch
+            best_epoch = epoch
+            print ("run finishes")
+            print ("best epoch is, ", best_epoch)
+            print ("best val performance is, ", best_val)
+            print ("best test performance is, ", best_test)
+            print ("------------------------------------------")
 
 
 

@@ -27,16 +27,26 @@ from models.decoders import TimeProjDecoder, SimpleLinkPredictor
 from models.tgn.time_enc import TimeEncoder
 
 
-def test(args, data):
-    print ("hi")
-
 
 
 
 
 
 def run(args, data, seed=1):
-    #data stores the discretized snapshots
+    
+    if args.wandb:
+        wandb.init(
+            # set the wandb project where this run will be logged
+            project="utg",
+            
+            # track hyperparameters and run metadata
+            config={
+            "learning_rate": args.lr,
+            "architecture": "utg_gnn_mlp",
+            "dataset": args.dataset,
+            "time granularity": args.time_scale,
+            }
+        )
 
 
     set_random(seed)
@@ -57,7 +67,8 @@ def run(args, data, seed=1):
     ts_idx = 0
 
     train_data = full_data[train_mask]
-
+    val_data = full_data[val_mask]
+    test_data = full_data[test_mask]
 
     #! set up node features
     node_feat = dataset.node_feat
@@ -154,13 +165,97 @@ def run(args, data, seed=1):
             pos_index = pos_index.long().to(args.device)
             embeddings = encoder(pos_index, x=node_feat) 
 
-        print(f"Epoch: {epoch:02d}, Loss: {loss:.4f}, Training elapsed Time (s): {timeit.default_timer() - start_epoch_train: .4f}")
+        train_time = timeit.default_timer() - start_epoch_train
+        print(f"Epoch: {epoch:02d}, Loss: {loss:.4f}, Training elapsed Time (s): {train_time: .4f}")
         print ("training loss is ", total_loss / train_data.num_events)
+        embeddings = embeddings.detach()
 
 
+        start_epoch_val = timeit.default_timer()
         #* validation
         val_snapshots = data['val_data']['edge_index']
         val_ts = data['val_data']['ts_map']
+        val_loader = TemporalDataLoader(val_data, batch_size=batch_size)
+        encoder.eval()
+        decoder.eval()
+
+        evaluator = Evaluator(name=args.dataset)
+        neg_sampler = dataset.negative_sampler
+        dataset.load_val_ns()
+
+        perf_list = np.zeros(val_data.src.shape[0])
+        perf_idx = 0
+
+        ts_idx = 0
+        update = True
+
+        for batch in val_loader:
+            pos_src, pos_dst, pos_t, pos_msg = (
+            batch.src,
+            batch.dst,
+            batch.t,
+            batch.msg,
+            )
+
+            #! update the model now if the prediction batch has moved to next snapshot
+            if (pos_t[0] > val_ts[ts_idx] and update == True):
+                #* update the snapshot embedding
+                pos_index = val_snapshots[ts_idx]
+                pos_index = pos_index.long().to(args.device)
+                embeddings = encoder(pos_index, x=node_feat) 
+                embeddings = embeddings.detach()
+                if (ts_idx >= (len(val_ts) - 1)):
+                    update = False
+                else:
+                    ts_idx += 1
+
+
+            neg_batch_list = neg_sampler.query_batch(np.array(pos_src.cpu()), np.array(pos_dst.cpu()), np.array(pos_t.cpu()), split_mode='val')
+            for idx, neg_batch in enumerate(neg_batch_list):
+                query_src = np.array([int(pos_src[idx]) for _ in range(len(neg_batch) + 1)])
+                query_dst = np.concatenate([np.array([int(pos_dst[idx])]), neg_batch])
+                query_src = torch.from_numpy(query_src).long().to(args.device)
+                query_dst = torch.from_numpy(query_dst).long().to(args.device)
+                edge_index = torch.stack((query_src, query_dst), dim=0)
+                y_pred  = decoder(embeddings[edge_index[0]], embeddings[edge_index[1]])
+                y_pred = y_pred.reshape(-1).detach().cpu().numpy()
+
+                input_dict = {
+                        "y_pred_pos": np.array([y_pred[0]]),
+                        "y_pred_neg": np.array(y_pred[1:]),
+                        "eval_metric": [metric],
+                    }
+                perf_list[perf_idx] = evaluator.eval(input_dict)[metric]
+                perf_idx += 1
+
+        #* update to the final snapshot
+        pos_index = val_snapshots[ts_idx]
+        pos_index = pos_index.long().to(args.device)
+        embeddings = encoder(pos_index, x=node_feat) 
+        embeddings = embeddings.detach()
+
+        val_metrics = float(np.mean(perf_list))
+        val_time = timeit.default_timer() - start_epoch_val
+        print ("validation metrics is ", val_metrics)
+        print ("val elapsed time is ", val_time)
+        print ("--------------------------------")
+
+        if (args.wandb):
+            wandb.log({"train_loss":(total_loss / train_data.num_events),
+                        "val_" + metric: val_metrics,
+                        "train time": train_time,
+                        "val time": val_time,
+                        })
+        
+
+
+
+
+
+
+
+
+
         
 
 
@@ -168,7 +263,7 @@ def run(args, data, seed=1):
 
 if __name__ == '__main__':
     from utils.configs import args
-    from utils.data_util import loader, prepare_dir
+    from utils.data_util import loader
 
 
     set_random(args.seed)
