@@ -92,10 +92,10 @@ def run(args, data, seed=1):
 
     time_encoder = TimeEncoder(out_channels=args.time_dim).to(args.device)
     encoder = GCN(in_channels=num_feat, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
-    # decoder = TimeProjDecoder(in_channels=args.hidden_channels, time_dim=args.time_dim, hidden_channels=args.hidden_channels, out_channels=1, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
-    decoder = SimpleLinkPredictor(in_channels=args.hidden_channels).to(args.device)
-    # optimizer = optim.Adam(set(time_encoder.parameters())|set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
-    optimizer = optim.Adam(set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
+    decoder = TimeProjDecoder(in_channels=args.hidden_channels, time_dim=args.time_dim, hidden_channels=args.hidden_channels, out_channels=1, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
+    # decoder = SimpleLinkPredictor(in_channels=args.hidden_channels).to(args.device)
+    optimizer = optim.Adam(set(time_encoder.parameters())|set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
+    # optimizer = optim.Adam(set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
     #criterion = torch.nn.BCEWithLogitsLoss()
     criterion = torch.nn.MSELoss()
     
@@ -140,21 +140,19 @@ def run(args, data, seed=1):
                 device=args.device,
             )
 
-            # time_embed = time_encoder(pos_t.float().to(args.device))
+            time_embed = time_encoder(pos_t.float().to(args.device))
             pos_edges = torch.stack([pos_src, pos_dst], dim=0)
             neg_edges = torch.stack([pos_src, neg_dst], dim=0)
 
-            # pos_out = decoder(embeddings[pos_edges[0]], embeddings[pos_edges[1]], time_embed)
-            # neg_out = decoder(embeddings[neg_edges[0]], embeddings[neg_edges[1]], time_embed)
-            pos_out = decoder(embeddings[pos_edges[0]], embeddings[pos_edges[1]])
-            neg_out = decoder(embeddings[neg_edges[0]], embeddings[neg_edges[1]])
+            pos_out = decoder(embeddings[pos_edges[0]], embeddings[pos_edges[1]], time_embed)
+            neg_out = decoder(embeddings[neg_edges[0]], embeddings[neg_edges[1]], time_embed)
+
 
             loss = criterion(pos_out, torch.ones_like(pos_out))
             loss += criterion(neg_out, torch.zeros_like(neg_out))
 
             total_loss += float(loss) * batch.num_events
 
-            #! due to time encoding is used in each batch, to train it correctly, backprop each batch
             loss.backward()
             optimizer.step()
 
@@ -189,6 +187,8 @@ def run(args, data, seed=1):
         ts_idx = 0
         update = True
 
+        embed_ctr = 0
+
         for batch in val_loader:
             pos_src, pos_dst, pos_t, pos_msg = (
             batch.src,
@@ -200,6 +200,7 @@ def run(args, data, seed=1):
             #! update the model now if the prediction batch has moved to next snapshot
             if (pos_t[0] > val_ts[ts_idx] and update == True):
                 #* update the snapshot embedding
+                embed_ctr += 1
                 pos_index = val_snapshots[ts_idx]
                 pos_index = pos_index.long().to(args.device)
                 embeddings = encoder(pos_index, x=node_feat) 
@@ -209,7 +210,7 @@ def run(args, data, seed=1):
                 else:
                     ts_idx += 1
 
-
+            time_embed = time_encoder(pos_t.float().to(args.device))
             neg_batch_list = neg_sampler.query_batch(np.array(pos_src.cpu()), np.array(pos_dst.cpu()), np.array(pos_t.cpu()), split_mode='val')
             for idx, neg_batch in enumerate(neg_batch_list):
                 query_src = torch.full((1 + len(neg_batch),), pos_src[idx], device=args.device)
@@ -220,7 +221,7 @@ def run(args, data, seed=1):
                             ),
                             device=args.device,
                         )
-                y_pred  = decoder(embeddings[query_src], embeddings[query_dst])
+                y_pred  = decoder(embeddings[query_src], embeddings[query_dst], time_embed[idx].repeat(query_src.shape[0],1))
                 y_pred = y_pred.squeeze(dim=-1).detach()
 
                 input_dict = {
@@ -272,7 +273,8 @@ if __name__ == '__main__':
     set_random(args.seed)
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
     args.time_dim = 32
-    args.hidden_channels = 128
+    #args.hidden_channels = 128
+    args.hidden_channels = 64
     args.num_layers = 2
 
     for seed in range(args.seed, args.seed + args.num_runs):
