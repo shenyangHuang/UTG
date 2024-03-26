@@ -113,8 +113,10 @@ if __name__ == '__main__':
 
     best_val = 0
     best_test = 0
+    best_epoch = 0
 
     for epoch in range(num_epochs):
+        print ("------------------------------------------")
         train_start_time = timeit.default_timer()
         optimizer.zero_grad()
         total_loss = 0
@@ -247,6 +249,7 @@ if __name__ == '__main__':
         val_time = timeit.default_timer() - val_start_time
 
         print(f"Epoch {epoch} : Val {metric}: {val_metrics}")
+        print ("Val time: ", val_time)
         if (args.wandb):
             wandb.log({"train_loss":(total_loss/num_nodes),
                     "val_" + metric: val_metrics,
@@ -317,6 +320,8 @@ if __name__ == '__main__':
             test_metrics = float(np.mean(perf_list))
             test_time = timeit.default_timer() - test_start_time
             print(f"Epoch {epoch} : Test {metric}: {test_metrics}")
+            print ("Test time: ", test_time)
+
 
             best_test = test_metrics
             #* implementing patience

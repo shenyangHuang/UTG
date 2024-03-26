@@ -108,6 +108,12 @@ python dtdg_edgebank.py -d enron -t monthly --mem_mode fixed_time_window
 ```
 
 
+4. GCLSTM Commands
+```
+python dtdg_gclstm.py --dataset=enron -t monthly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
+```
+
+
 
 ## Get Started with TGB Datasets
 
