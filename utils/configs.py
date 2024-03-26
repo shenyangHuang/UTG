@@ -53,6 +53,7 @@ parser.add_argument('--fixed_curvature', type=int, default=1, help='fixed (1) cu
 parser.add_argument('--aggregation', type=str, default='deg', help='aggregation method: [deg, att]')
 parser.add_argument('--nhid', type=int, default=16, help='dim of hidden embedding')
 parser.add_argument('--nout', type=int, default=16, help='dim of output embedding')
+parser.add_argument('--bs', type=int, help='Batch size', default=200)
 
 args = parser.parse_args()
 
@@ -166,15 +167,6 @@ if args.dataset in ['RedditB']:
     
 if 'tgb' in args.dataset:
     args.trainable_feat = 1  # let's use trainable features for TGB datasets
-
-
-
-
-
-
-
-
-
 
 
 
