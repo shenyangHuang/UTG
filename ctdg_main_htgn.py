@@ -129,8 +129,7 @@ class Runner(object):
                 pos_index = test_snapshots['edge_index'][ts_idx]
                 pos_index = pos_index.long().to(args.device)
                 z = self.model(pos_index, self.x)
-                embeddings = z.detach()
-                # embeddings = self.model.update_hiddens_all_with(z)
+                embeddings = self.model.update_hiddens_all_with(z)
 
                 if (ts_idx >= len(ts_list) - 1):
                     update = False
@@ -214,55 +213,24 @@ class Runner(object):
                 optimizer.zero_grad()
 
                 #* generate random samples for training
-                #! fix negative sample to be 1 to 1 with positive samples
-                
                 neg_index = generate_random_negatives(pos_index, num_nodes=args.num_nodes, num_neg_samples=1)
-                """
-                #! here only positive edges should pass through the model
-                in original code, edge index only comes from positive edges thus neg index is not used
-                only the z are used for prediction
-                """
-                #edge_index = torch.cat((pos_index, neg_index), dim=1)
                 if (snapshot_idx == 0):
-                    edge_index = pos_index
-                    z = self.model(edge_index, self.x)
+                    z = self.model(pos_index, self.x)
                                
-
                 if args.use_htc == 0:
-                    epoch_loss = self.loss(z, pos_edge_index=edge_index,  neg_edge_index=neg_index)
+                    epoch_loss = self.loss(z, pos_edge_index=pos_index,  neg_edge_index=neg_index)
                 else:
-                    epoch_loss = self.loss(z, pos_edge_index=edge_index, neg_edge_index=neg_index) + self.model.htc(z)
-                
-                # if (torch.isnan(epoch_loss).any()):
-                #     print ("snapshot id is ", snapshot_idx)
-                #     print ("shape of embeddings are ", z.shape)
-                #     print (z[0])
-                #     print ("shape of pos index are ", edge_index.shape)
-                #     print (edge_index[0])
-                #     print ("shape of neg index are ", neg_index.shape)
-                #     print (neg_index[0])
-                #     return
+                    epoch_loss = self.loss(z, pos_edge_index=pos_index, neg_edge_index=neg_index) + self.model.htc(z)
                 
                 epoch_loss.backward()
                 optimizer.step()
                 epoch_losses.append(epoch_loss.item())
 
-                #* update the embedding for the final train snapshot
+                #* update the embedding after the prediction
                 pos_index = snapshot_list[snapshot_idx]
                 pos_index = pos_index.long().to(args.device)
                 z = self.model(pos_index, self.x)
-                z = self.model.update_hiddens_all_with(z) #! not sure why this gives me nan
-
-                # if (torch.isnan(z).any()):
-                if (torch.isnan(z).any()):
-                    print ("snapshot id is ", snapshot_idx)
-                    print ("shape of embeddings are ", z.shape)
-                    print (z[0])
-                    # print ("shape of pos index are ", edge_index.shape)
-                    # print (edge_index[0])
-                    # print ("shape of neg index are ", neg_index.shape)
-                    # print (neg_index[0])
-                    return
+                z = self.model.update_hiddens_all_with(z) 
             
             average_epoch_loss = np.mean(epoch_losses)
             train_end_time = timeit.default_timer()

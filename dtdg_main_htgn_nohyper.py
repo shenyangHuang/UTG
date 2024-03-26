@@ -277,6 +277,9 @@ if __name__ == '__main__':
     from utils.data_util import loader, prepare_dir
 
     set_random(args.seed)
+    args.use_hyperdecoder = False
+    args.use_htc = 0
+
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
     init_logger(prepare_dir(args.output_folder) + args.dataset + '_timeScale_' + str(args.time_scale) + '_seed_' + str(args.seed) + '.log')
 
