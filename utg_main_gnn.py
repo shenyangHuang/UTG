@@ -158,6 +158,12 @@ def run(args, data, seed=1):
         print ("training loss is ", total_loss / train_data.num_events)
 
 
+        #* validation
+        val_snapshots = data['val_data']['edge_index']
+        val_ts = data['val_data']['ts_map']
+        
+
+
 
 
 if __name__ == '__main__':
