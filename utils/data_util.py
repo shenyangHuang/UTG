@@ -30,7 +30,7 @@ def get_edges(edge_index_list: list) -> list:
             #continue #empty snapshots
         else:
             edge_index, _ = remove_self_loops(
-                torch.from_numpy(np.array(edge_index_list[i])).transpose(1, 0))  # remove self-loop
+                torch.from_numpy(np.array(edge_index_list[i])))  # remove self-loop
             undirected_edge_list[idx] = to_undirected(edge_index) # convert to undirected/bi-directed edge_index
             idx += 1
     return undirected_edge_list
@@ -96,7 +96,6 @@ def prepare_dir(output_folder):
     return log_folder
 
 
-
 def process_edges(edge_index_list: dict,
                   num_nodes: int,
                   ts_map: list=None,
@@ -109,7 +108,6 @@ def process_edges(edge_index_list: dict,
         ts_map: list, element are the corresponding unix timestamp of the snapshots
     """
     pos_undirected_edges = get_edges(edge_index_list)
-    # num_nodes = int(np.max(np.hstack(pos_undirected_edges))) + 1
 
     if (keep_original):
         data = {
@@ -255,6 +253,8 @@ def load_TGX_dataset(dataset_name: str,
         else:
             edges = dtdg.data[ts]
         edges = np.array(edges).astype(int)
+        edges = np.swapaxes(edges,0,1) #! edges are in shape (num_edges,2) need to convert to (2, num_edges)
+        assert edges.shape[0] == 2
         if (ts <= val_time):
             train_snapshots[ts] = edges
         elif (ts > val_time and ts < test_time):
