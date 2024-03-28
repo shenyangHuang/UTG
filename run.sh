@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=long #unkillable #main #long
-#SBATCH --output=utg_time_wiki_lr001.txt 
-#SBATCH --error=utg_time_wiki_lr001_error.txt 
+#SBATCH --output=tgn_uci_lr001.txt 
+#SBATCH --error=tgn_uci_lr001_error.txt 
 #SBATCH --cpus-per-task=4                     # Ask for 4 CPUs
 #SBATCH --gres=gpu:1                  # Ask for 1 titan xp gpu:rtx8000:1 
 #SBATCH --mem=32G #64G                             # Ask for 32 GB of RAM
@@ -14,7 +14,7 @@ pwd
 
 #* for utg 
 
-CUDA_VISIBLE_DEVICES=0 python -u utg_main_gnn_time.py --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 500 --num_runs 1 --patience 100 --wandb
+# CUDA_VISIBLE_DEVICES=0 python -u utg_main_gnn_time.py --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 500 --num_runs 1 --patience 100 --wandb
 
 
 # CUDA_VISIBLE_DEVICES=0 python -u utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 500 --num_runs 1 --patience 100 --wandb
@@ -56,6 +56,20 @@ CUDA_VISIBLE_DEVICES=0 python -u utg_main_gnn_time.py --dataset=tgbl-wiki -t hou
 # CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --dataset=tgbl-review -t monthly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
 
 # CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --dataset=tgbl-coin -t hourly --lr 0.001 --max_epoch 200 --num_runs 5 --patience 50
+
+
+#* for TGN
+
+# python dtdg_tgn.py -d enron -t monthly --lr 0.001 --max_epoch 500 --seed 1 --num_runs 5 --patience 100
+
+python dtdg_tgn.py -d uci -t weekly --lr 0.001 --max_epoch 500 --seed 1 --num_runs 5 --patience 100
+
+# python dtdg_tgn.py -d mooc -t daily --lr 0.001 --max_epoch 500 --seed 1 --num_runs 5 --patience 100
+
+# python dtdg_tgn.py -d social_evo -t daily --lr 0.001 --max_epoch 500 --seed 1 --num_runs 5 --patience 100
+
+# python dtdg_tgn.py -d contacts -t hourly --lr 0.0001 --max_epoch 200 --seed 1 --num_runs 5 --patience 50
+
 
 
 # CUDA_VISIBLE_DEVICES=0 python tgn_dtdg_training.py -d tgbl-coin -t weekly --seed 3

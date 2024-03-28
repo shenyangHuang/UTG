@@ -108,6 +108,10 @@ class Runner(object):
             pos_index = torch.from_numpy(test_edges[snapshot_idx])
             pos_index = pos_index.long().to(args.device)
 
+            print ("tid is ", snapshot_idx)
+            print ("there are ", pos_index.shape[1], " edges in this snapshot")
+            print ("----------------------------------------------------")
+
             for i in range(pos_index.shape[0]):
                 pos_src = pos_index[i][0].item()
                 pos_dst = pos_index[i][1].item()

@@ -150,6 +150,10 @@ def test(index_dict, tids, data, neg_sampler, split_mode):
         idx_s = index_dict[tid][0]
         idx_e = index_dict[tid][1]
 
+        print (tid)
+        print ("there are ", idx_e - idx_s, " events in this snapshot")
+        print ("--------------------------------------")
+
         pos_src = data.src[idx_s:idx_e]
         pos_dst = data.dst[idx_s:idx_e]
         pos_t = data.t[idx_s:idx_e]
@@ -411,8 +415,9 @@ for run_idx in range(NUM_RUNS):
     neg_sampler.load_eval_set(fname=DATA + "_test_ns.pkl", split_mode="test",)
 
     # final testing
+    tids = range(test_start, test_end + 1)
     start_test = timeit.default_timer()
-    perf_metric_test = test(index_dict, test_start, test_end, data, neg_sampler, split_mode="test")
+    perf_metric_test = test(index_dict, tids, data, neg_sampler, split_mode="test")
 
     print(f"INFO: Test")
     print(f"\tBest Epoch: {best_epoch}")
