@@ -165,10 +165,6 @@ def TGB_data_discrete_processing(dataset_name: str,
         dtdg, ts_list = ctdg.discretize(time_scale=time_scale, store_unix=True)
         dtdg.shift_time_to_zero()
 
-        #! requires manually remap the node_ids, don't add it for now
-        # id_map = dtdg.map_nid()
-        # tgb.utils.utils.save_pkl(dtdg, data_file)
-
     """
     #! continue debugging here, 
     the number of snapshots in ts_list is different than snapshots
@@ -186,7 +182,9 @@ def TGB_data_discrete_processing(dataset_name: str,
 
     #num_nodes = dtdg.total_nodes() + 1 #this calculates the # of unique nodes
     num_nodes = int(dtdg.max_nid()) + 1 #this calculates max node ID in the dataset
+
     ts_list = list(set(ts_list))
+    ts_list.sort()
     return snapshots, num_nodes, ts_list
 
 
