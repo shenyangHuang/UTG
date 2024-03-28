@@ -35,8 +35,9 @@ def test_dtdg_loading():
     1. load directly from TGX, count # of edges, count # of nodes
     2. compare with discretized version, count # of edges, count # of nodes
     3. check that the undirected graph used for HTGN matches with the original
-    4. test that all negative samples are extracted for validation set
     """
+
+    #* load directly from TGX
     time_scale = "monthly"
     dataset = tgx.builtin.enron()
     ctdg = tgx.Graph(dataset)
@@ -51,14 +52,21 @@ def test_dtdg_loading():
     assert check_is_sorted(snapshot_id_list) == True, "Snapshot IDs are sorted in ascending order"
 
 
-
+    #* checked exported edgelist
     full_data = dtdg.export_full_data()
     sources = full_data["sources"]
     destinations = full_data["destinations"]
     timestamps = full_data["timestamps"]
     assert len(sources) == len(destinations) == len(timestamps) == dtdg_num_edges, "Number of sources, destinations, timestamps are the same"
 
-    #* loading for DTDG methods on DTDG data
+    #* construct snapshots based on timestamps
+    from utils.utils_func import get_snapshot_batches
+
+    index_dict = get_snapshot_batches(timestamps)
+    assert len(snapshot_id_list) == len(index_dict), "equal number of snapshots"
+
+
+    #* check DTDG method dataloading setup
     from utils.data_util import loader
 
     data = loader(dataset="enron", time_scale="monthly")
@@ -66,9 +74,9 @@ def test_dtdg_loading():
     val_data = data['val_data']
     test_data = data['test_data']
 
-    train_snapshot_ids = list(train_data['edge_index'].keys())
-    val_snapshot_ids = list(val_data['edge_index'].keys())
-    test_snapshot_ids = list(test_data['edge_index'].keys())
+    train_snapshot_ids = list(train_data['original_edges'].keys())
+    val_snapshot_ids = list(val_data['original_edges'].keys())
+    test_snapshot_ids = list(test_data['original_edges'].keys())
 
     assert check_is_sorted(train_snapshot_ids) == True, "Train Snapshot IDs are sorted in ascending order"
     assert check_is_sorted(val_snapshot_ids) == True, "Val Snapshot IDs are sorted in ascending order"
@@ -84,6 +92,7 @@ def test_dtdg_loading():
     num_edges += count_snapshot_edges(test_data['original_edges'])
 
     assert num_edges == dtdg_num_edges, "number of edges sum to the same as raw data from train, val, test partitions"
+
 
 
 
