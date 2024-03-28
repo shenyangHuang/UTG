@@ -161,9 +161,9 @@ def TGB_data_discrete_processing(dataset_name: str,
             mask = tgx_dataset.test_mask
         tgx_dataset.data = tgx_dataset.data[mask] #here only looking at the edges
         ctdg = tgx.Graph(tgx_dataset)
-        ctdg.shift_time_to_zero()
 
         dtdg, ts_list = ctdg.discretize(time_scale=time_scale, store_unix=True)
+        dtdg.shift_time_to_zero()
 
         #! requires manually remap the node_ids, don't add it for now
         # id_map = dtdg.map_nid()
