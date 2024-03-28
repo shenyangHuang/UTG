@@ -50,6 +50,14 @@ def test_dtdg_loading():
     assert check_is_sorted(ts_list) == True, "Timestamps are sorted in ascending order"
     assert check_is_sorted(snapshot_id_list) == True, "Snapshot IDs are sorted in ascending order"
 
+
+
+    full_data = dtdg.export_full_data()
+    sources = full_data["sources"]
+    destinations = full_data["destinations"]
+    timestamps = full_data["timestamps"]
+    assert len(sources) == len(destinations) == len(timestamps) == dtdg_num_edges, "Number of sources, destinations, timestamps are the same"
+
     #* loading for DTDG methods on DTDG data
     from utils.data_util import loader
 
