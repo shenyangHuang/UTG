@@ -8,7 +8,8 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import networkx as nx
 from typing import Optional, Dict, Any, Tuple
-
+import math
+import math
 
 def set_random(random_seed):
     random.seed(random_seed)
@@ -103,6 +104,11 @@ def generate_splits(
                 [(1 - val_ratio - test_ratio), (1 - test_ratio)],
             )
         )
+
+        #! changes added to ensure it works with integer correctly
+        val_time = math.ceil(val_time)
+        test_time = math.ceil(test_time)
+
         timestamps = full_data["timestamps"]
 
         train_mask = timestamps <= val_time
