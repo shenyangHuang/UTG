@@ -42,9 +42,6 @@ class Runner(object):
         self.val_data = data['val_data']
         self.test_data = data['test_data']
 
-        print (self.train_data['ts_map'][0:10])
-        print (self.val_data['ts_map'][0:10])
-
 
         args.num_nodes = data['train_data']['num_nodes'] + int(0.1 * data['train_data']['num_nodes']) # make it larger to fit the inductive nodes
 
