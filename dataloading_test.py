@@ -79,9 +79,6 @@ def test_dtdg_loading():
 
 
 
-
-
-
 # def test_ctdg_loading():
 #     r"""
 #     1. load directly from TGB, check # of edges
