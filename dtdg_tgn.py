@@ -304,8 +304,12 @@ test_data = data[test_mask]
 
 train_start = train_data.t[0].item()
 train_end = train_data.t[-1].item()
+print ("train_start: ", train_start, "train_end: ", train_end)
+
 val_start = val_data.t[0].item()
 val_end = val_data.t[-1].item()
+
+print ("val_start: ", val_start, "val_end: ", val_end)
 test_start = test_data.t[0].item()
 test_end = test_data.t[-1].item()
 
