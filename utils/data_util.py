@@ -257,7 +257,7 @@ def load_TGX_dataset(dataset_name: str,
         assert edges.shape[0] == 2
         if (ts <= val_time):
             train_snapshots[ts] = edges
-        elif (ts > val_time and ts < test_time):
+        elif (ts > val_time and ts <= test_time):
             val_snapshots[ts] = edges
         else:
             test_snapshots[ts] = edges

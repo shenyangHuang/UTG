@@ -1,4 +1,5 @@
 import tgx
+import torch
 #! use assert to ensure https://docs.pytest.org/en/8.0.x/getting-started.html
 
 def check_is_sorted(test_list: list) -> bool:
@@ -63,7 +64,20 @@ def test_dtdg_loading():
     from utils.utils_func import get_snapshot_batches
 
     index_dict = get_snapshot_batches(timestamps)
-    assert len(snapshot_id_list) == len(index_dict), "equal number of snapshots"
+    assert len(snapshot_id_list) == len(index_dict), "same number of snapshots as index dict"
+
+
+    #* check if splits are the same too
+    from utils.utils_func import generate_splits
+    val_ratio = 0.15
+    test_ratio = 0.15
+    train_mask, val_mask, test_mask = generate_splits(full_data,
+        val_ratio=val_ratio,
+        test_ratio=test_ratio,
+    )
+    train_ts = timestamps[train_mask]
+    val_ts = timestamps[val_mask]
+    test_ts = timestamps[test_mask]
 
 
     #* check DTDG method dataloading setup
@@ -82,6 +96,16 @@ def test_dtdg_loading():
     assert check_is_sorted(val_snapshot_ids) == True, "Val Snapshot IDs are sorted in ascending order"
     assert check_is_sorted(test_snapshot_ids) == True, "Test Snapshot IDs are sorted in ascending order"
 
+    assert train_ts[0] == train_snapshot_ids[0], "First train snapshot ID is the same as the first timestamp"
+    assert train_ts[-1] == train_snapshot_ids[-1], "Last train snapshot ID is the same as the last timestamp"
+    
+    print (val_ts[-1], val_snapshot_ids[-1])
+    assert val_ts[0] == val_snapshot_ids[0], "First val snapshot ID is the same as the first timestamp"
+    assert val_ts[-1] == val_snapshot_ids[-1], "last val snapshot ID is the same as the last timestamp"
+
+    
+    assert test_ts[0] == test_snapshot_ids[0], "First test snapshot ID is the same as the first timestamp"
+    assert test_ts[-1] == test_snapshot_ids[-1], "Last test snapshot ID is the same as the last timestamp"
     all_snapshot_ids = train_snapshot_ids + val_snapshot_ids + test_snapshot_ids
 
     assert all_snapshot_ids == snapshot_id_list, "All snapshot IDs are the same"
