@@ -150,10 +150,6 @@ def test(index_dict, tids, data, neg_sampler, split_mode):
         idx_s = index_dict[tid][0]
         idx_e = index_dict[tid][1]
 
-        print (tid)
-        print ("there are ", idx_e - idx_s, " events in this snapshot")
-        print ("--------------------------------------")
-
         pos_src = data.src[idx_s:idx_e]
         pos_dst = data.dst[idx_s:idx_e]
         pos_t = data.t[idx_s:idx_e]
