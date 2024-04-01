@@ -76,7 +76,6 @@ python dtdg_tgn.py -d uci -t weekly --lr 0.001 --max_epoch 500 --seed 1 --num_ru
 
 
 
-
 # CUDA_VISIBLE_DEVICES=0 python tgn_dtdg_training.py -d tgbl-coin -t weekly --seed 3
 # CUDA_VISIBLE_DEVICES=0 python tgn_dtdg_eval.py -d tgbl-wiki -t hourly --seed 3 --dtrain
 # CUDA_VISIBLE_DEVICES=0 python tgn_dtdg_eval.py -d tgbl-wiki -t hourly --seed 1 --nodtrain
