@@ -355,9 +355,8 @@ neg_sampler = NegativeEdgeSampler(dataset_name=DATA, strategy="hist_rnd")
 for run_idx in range(NUM_RUNS):
     print('-------------------------------------------------------------------------------')
     print(f"INFO: >>>>> Run: {run_idx} <<<<<")
-    start_run = timeit.default_timer()
-
     set_random(run_idx + SEED)
+    start_run = timeit.default_timer()
 
     save_model_dir = f'{osp.dirname(osp.abspath(__file__))}/saved_models/'
     save_model_id = f'{MODEL_NAME}_{DATA}_{SEED}_{run_idx}'
