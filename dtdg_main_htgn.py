@@ -100,18 +100,19 @@ class Runner(object):
         test_snapshots = test_data['edge_index'] #converted to undirected, also removes self loops as required by HTGN
         test_edges = test_data['original_edges'] #original edges unmodified
         ts_min = min(test_snapshots.keys())
-
         perf_list = {}
         perf_idx = 0
+        ctr = 0
 
         for snapshot_idx in test_snapshots.keys():
-            pos_index = torch.from_numpy(test_edges[snapshot_idx])
+            pos_index = torch.from_numpy(test_edges[snapshot_idx])  #shape(2,-1)
             pos_index = pos_index.long().to(args.device)
 
-            for i in range(pos_index.shape[0]):
+            for i in range(pos_index.shape[1]):
                 pos_src = pos_index[0][i].item()
                 pos_dst = pos_index[1][i].item()
                 pos_t = snapshot_idx
+                ctr += 1
                 neg_batch_list = neg_sampler.query_batch(np.array([pos_src]), np.array([pos_dst]), np.array([pos_t]), split_mode=split_mode)
                 
                 for idx, neg_batch in enumerate(neg_batch_list):
@@ -136,6 +137,8 @@ class Runner(object):
             z = self.model(prev_index, self.x)
             embeddings = self.model.update_hiddens_all_with(z)
 
+        print ("total edges tested: ", ctr)
+        print ("total performance metrics: ", len(perf_list))
         result = list(perf_list.values())
         perf_list = np.array(result)
         perf_metrics = float(np.mean(perf_list))
