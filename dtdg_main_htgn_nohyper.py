@@ -108,9 +108,9 @@ class Runner(object):
             pos_index = torch.from_numpy(test_edges[snapshot_idx])
             pos_index = pos_index.long().to(args.device)
 
-            for i in range(pos_index.shape[0]):
-                pos_src = pos_index[i][0].item()
-                pos_dst = pos_index[i][1].item()
+            for i in range(pos_index.shape[1]):
+                pos_src = pos_index[0][i].item()
+                pos_dst = pos_index[1][i].item()
                 pos_t = snapshot_idx
                 neg_batch_list = neg_sampler.query_batch(np.array([pos_src]), np.array([pos_dst]), np.array([pos_t]), split_mode=split_mode)
                 

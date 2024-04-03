@@ -211,7 +211,7 @@ if __name__ == '__main__':
             perf_idx = 0
 
             for snapshot_idx in val_snapshots.keys():
-                pos_index = torch.from_numpy(val_edges[snapshot_idx])
+                pos_index = torch.from_numpy(val_edges[snapshot_idx]) # (2,-1)
                 pos_index = pos_index.long().to(args.device)
                 #* update the node embeddings with edges from previous snapshot
                 if (snapshot_idx > ts_min):
@@ -224,9 +224,9 @@ if __name__ == '__main__':
                         raise NotImplementedError("Edge attributes are not yet supported")
                     h, h_0, c_0 = model(node_feat, prev_index, edge_attr, h_0, c_0)
                 
-                for i in range(pos_index.shape[0]):
-                    pos_src = pos_index[i][0].item()
-                    pos_dst = pos_index[i][1].item()
+                for i in range(pos_index.shape[1]):
+                    pos_src = pos_index[0][i].item()
+                    pos_dst = pos_index[1][i].item()
                     pos_t = snapshot_idx
                     neg_batch_list = neg_sampler.query_batch(np.array([pos_src]), np.array([pos_dst]), np.array([pos_t]), split_mode='val')
                     
@@ -253,7 +253,7 @@ if __name__ == '__main__':
             val_metrics = float(np.mean(perf_list))
             val_time = timeit.default_timer() - val_start_time
 
-            print(f"Epoch {epoch} : Val {metric}: {val_metrics}")
+            print(f"Val {metric}: {val_metrics}")
             print ("Val time: ", val_time)
             if (args.wandb):
                 wandb.log({"train_loss":(total_loss/num_nodes),
@@ -297,9 +297,9 @@ if __name__ == '__main__':
                             raise NotImplementedError("Edge attributes are not yet supported")
                         h, h_0, c_0 = model(node_feat, prev_index, edge_attr, h_0, c_0)
                     
-                    for i in range(pos_index.shape[0]):
-                        pos_src = pos_index[i][0].item()
-                        pos_dst = pos_index[i][1].item()
+                    for i in range(pos_index.shape[1]):
+                        pos_src = pos_index[0][i].item()
+                        pos_dst = pos_index[1][i].item()
                         pos_t = snapshot_idx
                         neg_batch_list = neg_sampler.query_batch(np.array([pos_src]), np.array([pos_dst]), np.array([pos_t]), split_mode='test')
                         
@@ -324,7 +324,7 @@ if __name__ == '__main__':
                 perf_list = np.array(result)
                 test_metrics = float(np.mean(perf_list))
                 test_time = timeit.default_timer() - test_start_time
-                print(f"Epoch {epoch} : Test {metric}: {test_metrics}")
+                print(f"Test {metric}: {test_metrics}")
                 print ("Test time: ", test_time)
 
 
@@ -339,12 +339,11 @@ if __name__ == '__main__':
                     print ("------------------------------------------")
                     break
                 best_epoch = epoch
-            best_epoch = epoch
-            print ("run finishes")
-            print ("best epoch is, ", best_epoch)
-            print ("best val performance is, ", best_val)
-            print ("best test performance is, ", best_test)
-            print ("------------------------------------------")
+        print ("run finishes")
+        print ("best epoch is, ", best_epoch)
+        print ("best val performance is, ", best_val)
+        print ("best test performance is, ", best_test)
+        print ("------------------------------------------")
 
 
 
