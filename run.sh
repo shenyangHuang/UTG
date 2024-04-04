@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=long #unkillable #main #long
-#SBATCH --output=gclstm_contacts.txt 
-#SBATCH --error=gclstm_contacts_error.txt 
+#SBATCH --output=gclstm_contacts_update.txt 
+#SBATCH --error=gclstm_contacts_update_error.txt 
 #SBATCH --cpus-per-task=4                     # Ask for 4 CPUs
 #SBATCH --gres=gpu:1                  # Ask for 1 titan xp gpu:rtx8000:1 
 #SBATCH --mem=32G #64G                             # Ask for 32 GB of RAM

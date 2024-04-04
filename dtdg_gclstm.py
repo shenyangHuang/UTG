@@ -213,16 +213,6 @@ if __name__ == '__main__':
             for snapshot_idx in val_snapshots.keys():
                 pos_index = torch.from_numpy(val_edges[snapshot_idx]) # (2,-1)
                 pos_index = pos_index.long().to(args.device)
-                #* update the node embeddings with edges from previous snapshot
-                if (snapshot_idx > ts_min):
-                    #* update the snapshot embedding
-                    prev_index = val_snapshots[snapshot_idx-1]
-                    prev_index = prev_index.long().to(args.device)
-                    if ('edge_attr' not in val_data):
-                        edge_attr = torch.ones(prev_index.size(1), edge_feat_dim).to(args.device)
-                    else:
-                        raise NotImplementedError("Edge attributes are not yet supported")
-                    h, h_0, c_0 = model(node_feat, prev_index, edge_attr, h_0, c_0)
                 
                 for i in range(pos_index.shape[1]):
                     pos_src = pos_index[0][i].item()
@@ -247,6 +237,17 @@ if __name__ == '__main__':
                             }
                         perf_list[perf_idx] = evaluator.eval(input_dict)[metric]
                         perf_idx += 1
+
+
+                #* update the snapshot embedding
+                prev_index = val_snapshots[snapshot_idx]
+                prev_index = prev_index.long().to(args.device)
+                if ('edge_attr' not in val_data):
+                    edge_attr = torch.ones(prev_index.size(1), edge_feat_dim).to(args.device)
+                else:
+                    raise NotImplementedError("Edge attributes are not yet supported")
+                h, h_0, c_0 = model(node_feat, prev_index, edge_attr, h_0, c_0)
+
 
             result = list(perf_list.values())
             perf_list = np.array(result)
@@ -286,16 +287,6 @@ if __name__ == '__main__':
                 for snapshot_idx in test_snapshots.keys():
                     pos_index = torch.from_numpy(test_edges[snapshot_idx])
                     pos_index = pos_index.long().to(args.device)
-                    #* update the node embeddings with edges from previous snapshot
-                    if (snapshot_idx > ts_min):
-                        #* update the snapshot embedding
-                        prev_index = test_snapshots[snapshot_idx-1]
-                        prev_index = prev_index.long().to(args.device)
-                        if ('edge_attr' not in test_data):
-                            edge_attr = torch.ones(prev_index.size(1), edge_feat_dim).to(args.device)
-                        else:
-                            raise NotImplementedError("Edge attributes are not yet supported")
-                        h, h_0, c_0 = model(node_feat, prev_index, edge_attr, h_0, c_0)
                     
                     for i in range(pos_index.shape[1]):
                         pos_src = pos_index[0][i].item()
@@ -320,6 +311,16 @@ if __name__ == '__main__':
                                 }
                             perf_list[perf_idx] = evaluator.eval(input_dict)[metric]
                             perf_idx += 1
+
+                    #* update the snapshot embedding
+                    prev_index = test_snapshots[snapshot_idx]
+                    prev_index = prev_index.long().to(args.device)
+                    if ('edge_attr' not in test_data):
+                        edge_attr = torch.ones(prev_index.size(1), edge_feat_dim).to(args.device)
+                    else:
+                        raise NotImplementedError("Edge attributes are not yet supported")
+                    h, h_0, c_0 = model(node_feat, prev_index, edge_attr, h_0, c_0)
+
                 result = list(perf_list.values())
                 perf_list = np.array(result)
                 test_metrics = float(np.mean(perf_list))
