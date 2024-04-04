@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=long #unkillable #main #long
-#SBATCH --output=gclstm_contacts_update.txt 
-#SBATCH --error=gclstm_contacts_update_error.txt 
+#SBATCH --output=gclstm_social_evo_update.txt 
+#SBATCH --error=gclstm_social_evo_update_error.txt 
 #SBATCH --cpus-per-task=4                     # Ask for 4 CPUs
 #SBATCH --gres=gpu:1                  # Ask for 1 titan xp gpu:rtx8000:1 
 #SBATCH --mem=32G #64G                             # Ask for 32 GB of RAM
@@ -25,9 +25,9 @@ pwd
 
 # CUDA_VISIBLE_DEVICES=0 python -u dtdg_gclstm.py --dataset mooc -t daily --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
 
-# CUDA_VISIBLE_DEVICES=0 python -u dtdg_gclstm.py --dataset social_evo -t daily --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
+CUDA_VISIBLE_DEVICES=0 python -u dtdg_gclstm.py --dataset social_evo -t daily --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
 
-CUDA_VISIBLE_DEVICES=0 python -u dtdg_gclstm.py --dataset contacts -t hourly --lr 0.001 --max_epoch 200 --num_runs 5 --patience 50
+# CUDA_VISIBLE_DEVICES=0 python -u dtdg_gclstm.py --dataset contacts -t hourly --lr 0.001 --max_epoch 200 --num_runs 5 --patience 50
 
 # CUDA_VISIBLE_DEVICES=0 python -u dtdg_tgn.py -d canparl -t biyearly --lr 0.001 --max_epoch 500 --seed 1 --num_runs 5 --patience 100
 
