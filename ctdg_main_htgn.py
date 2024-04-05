@@ -38,10 +38,10 @@ class Runner(object):
     def __init__(self):
         
         self.train_data = data['train_data']
-        
         #* for tgb dataset, we will convert the val and test set on the fly here instead of loading. 
         self.val_data = data['val_data']
         self.test_data = data['test_data']
+
 
         args.num_nodes = data['train_data']['num_nodes'] + int(0.1 * data['train_data']['num_nodes']) # make it larger to fit the inductive nodes
 

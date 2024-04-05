@@ -108,6 +108,29 @@ python dtdg_edgebank.py -d enron -t monthly --mem_mode fixed_time_window
 ```
 
 
+4. GCLSTM Commands
+```
+python dtdg_gclstm.py --dataset=canparl -t biyearly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
+
+python dtdg_gclstm.py --dataset=enron -t monthly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
+
+python dtdg_gclstm.py --dataset=uci -t weekly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
+
+python dtdg_gclstm.py --dataset mooc -t daily --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
+
+python dtdg_gclstm.py --dataset social_evo -t daily --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
+
+python dtdg_gclstm.py --dataset contacts -t hourly --lr 0.001 --max_epoch 200 --num_runs 5 --patience 50
+
+```
+
+5. UTG with basic GNN encoder and MLP decoder
+
+```
+python utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 0.001
+```
+
+
 
 ## Get Started with TGB Datasets
 
