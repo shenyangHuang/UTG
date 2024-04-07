@@ -99,7 +99,6 @@ def test_dtdg_loading():
     assert train_ts[0] == train_snapshot_ids[0], "First train snapshot ID is the same as the first timestamp"
     assert train_ts[-1] == train_snapshot_ids[-1], "Last train snapshot ID is the same as the last timestamp"
     
-    print (val_ts[-1], val_snapshot_ids[-1])
     assert val_ts[0] == val_snapshot_ids[0], "First val snapshot ID is the same as the first timestamp"
     assert val_ts[-1] == val_snapshot_ids[-1], "last val snapshot ID is the same as the last timestamp"
 
@@ -122,36 +121,117 @@ def test_dtdg_loading():
 
 def test_ctdg_loading():
     r"""
-    1. TGB dataloading
-    2. UTG dataloading
+    want to test if the update for each snapshot is inserted at the right time
     """
     DATA = "tgbl-wiki"
     time_scale = "hourly"
 
 
-    from tgb.linkproppred.dataset import LinkPropPredDataset
+    from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
     #* TGB dataloading
-    dataset = LinkPropPredDataset(name=DATA, root="datasets", preprocess=True)
-    data = dataset.full_data  
-    metric = dataset.eval_metric
-
-
-    # get masks
+    dataset = PyGLinkPropPredDataset(name=DATA, root="datasets")
+    full_data = dataset.get_TemporalData()
+    #get masks
     train_mask = dataset.train_mask
     val_mask = dataset.val_mask
     test_mask = dataset.test_mask
 
+    train_data = full_data[train_mask]
+    val_data = full_data[val_mask]
+    test_data = full_data[test_mask]
 
-
+    from torch_geometric.loader import TemporalDataLoader
+    batch_size = 1 #200
+    train_loader = TemporalDataLoader(train_data, batch_size=batch_size)
+    val_loader = TemporalDataLoader(val_data, batch_size=batch_size)
+    test_loader = TemporalDataLoader(test_data, batch_size=batch_size)
 
 
     from utils.data_util import loader
     data = loader(dataset=DATA, time_scale=time_scale)
+    train_snapshots = data['train_data']['edge_index']
+    train_ts = data['train_data']['ts_map']
+    val_snapshots = data['val_data']['edge_index']
+    val_ts = data['val_data']['ts_map']
+    test_snapshots = data['test_data']['edge_index']
+    test_ts = data['test_data']['ts_map']
+
+
+    all_snapshot_ts = train_ts + val_ts + test_ts
+    assert all_snapshot_ts == sorted(all_snapshot_ts), "All snapshot timestamps are sorted in ascending order"
+
+    all_seen_ts = []
+    assert train_ts[0] < val_ts[0] < test_ts[0], "Train, Val, Test timestamps are in the correct order"
+
+
+    max_train_ts_idx = len(train_ts) -1
+    ts_idx = 0
+    for batch in train_loader:
+        pos_src, pos_dst, pos_t, pos_msg = (
+        batch.src,
+        batch.dst,
+        batch.t,
+        batch.msg,
+        )
+
+        #! update the model now if the prediction batch has moved to next snapshot
+        #! need to consider possibility of multiple update
+        while (pos_t[0] > train_ts[ts_idx]):
+            all_seen_ts.append(train_ts[ts_idx])
+            if (ts_idx < max_train_ts_idx):
+                ts_idx += 1
+                
+
+    max_val_ts_idx = len(val_ts) - 1
+    ts_idx = 0
+    #! we want to update the snapshot only once when it has first arrived
+    for batch in val_loader:
+        pos_src, pos_dst, pos_t, pos_msg = (
+        batch.src,
+        batch.dst,
+        batch.t,
+        batch.msg,
+        )
+
+        #! update the model now if the prediction batch has moved to next snapshot
+        while (pos_t[0] > val_ts[ts_idx]):
+            all_seen_ts.append(val_ts[ts_idx])
+            if (ts_idx < max_val_ts_idx):
+                ts_idx += 1
+
+    max_test_ts_idx = len(test_ts) - 1
+    ts_idx = 0
+    for batch in test_loader:
+        pos_src, pos_dst, pos_t, pos_msg = (
+        batch.src,
+        batch.dst,
+        batch.t,
+        batch.msg,
+        )
+
+        #! update the model now if the prediction batch has moved to next snapshot
+        while (pos_t[0] > test_ts[ts_idx]):
+            all_seen_ts.append(test_ts[ts_idx])
+            if (ts_idx < max_test_ts_idx):
+                ts_idx += 1
+
+    print (len(all_seen_ts))
+    print (len(all_snapshot_ts))
+
+    assert all_seen_ts == all_snapshot_ts, "All snapshot timestamps are seen in the correct order"
+
+    
+
+
+    
+
 
 
 
 if __name__ == '__main__':
-    test_dtdg_loading()
+
+    #test_dtdg_loading()
+    test_ctdg_loading()
 
 
 

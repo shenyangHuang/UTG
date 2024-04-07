@@ -161,10 +161,9 @@ def TGB_data_discrete_processing(dataset_name: str,
         ctdg = tgx.Graph(tgx_dataset)
 
         dtdg, ts_list = ctdg.discretize(time_scale=time_scale, store_unix=True)
-        dtdg.shift_time_to_zero()
+        #dtdg.shift_time_to_zero()
 
     """
-    #! continue debugging here, 
     the number of snapshots in ts_list is different than snapshots
     because snapshots skips over empty snapshots
     """
@@ -176,6 +175,7 @@ def TGB_data_discrete_processing(dataset_name: str,
         else:
             edges = dtdg.data[ts]
         edges = np.array(edges).astype(int)
+        edges = np.swapaxes(edges,0,1) #! edges are in shape (num_edges,2) need to convert to (2, num_edges)
         snapshots[ts] = edges
 
     #num_nodes = dtdg.total_nodes() + 1 #this calculates the # of unique nodes
