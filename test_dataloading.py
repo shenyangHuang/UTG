@@ -120,13 +120,33 @@ def test_dtdg_loading():
 
 
 
-# def test_ctdg_loading():
-#     r"""
-#     1. load directly from TGB, check # of edges
-#     2. load TGB from TGX, check # of edges
-#     3. discretize TGB dataset edges, check # of edges
-#     """
-#     print ("hi")
+def test_ctdg_loading():
+    r"""
+    1. TGB dataloading
+    2. UTG dataloading
+    """
+    DATA = "tgbl-wiki"
+    time_scale = "hourly"
+
+
+    from tgb.linkproppred.dataset import LinkPropPredDataset
+    #* TGB dataloading
+    dataset = LinkPropPredDataset(name=DATA, root="datasets", preprocess=True)
+    data = dataset.full_data  
+    metric = dataset.eval_metric
+
+
+    # get masks
+    train_mask = dataset.train_mask
+    val_mask = dataset.val_mask
+    test_mask = dataset.test_mask
+
+
+
+
+
+    from utils.data_util import loader
+    data = loader(dataset=DATA, time_scale=time_scale)
 
 
 
