@@ -176,10 +176,9 @@ def test_ctdg_loading():
 
         #! update the model now if the prediction batch has moved to next snapshot
         #! need to consider possibility of multiple update
-        while (pos_t[0] > train_ts[ts_idx]):
+        while (pos_t[0] > train_ts[ts_idx] and ts_idx <= max_train_ts_idx):
             all_seen_ts.append(train_ts[ts_idx])
-            if (ts_idx < max_train_ts_idx):
-                ts_idx += 1
+            ts_idx += 1
                 
 
     max_val_ts_idx = len(val_ts) - 1
@@ -194,10 +193,9 @@ def test_ctdg_loading():
         )
 
         #! update the model now if the prediction batch has moved to next snapshot
-        while (pos_t[0] > val_ts[ts_idx]):
+        while (pos_t[0] > val_ts[ts_idx] and ts_idx <= max_val_ts_idx):
             all_seen_ts.append(val_ts[ts_idx])
-            if (ts_idx < max_val_ts_idx):
-                ts_idx += 1
+            ts_idx += 1
 
     max_test_ts_idx = len(test_ts) - 1
     ts_idx = 0
@@ -210,15 +208,16 @@ def test_ctdg_loading():
         )
 
         #! update the model now if the prediction batch has moved to next snapshot
-        while (pos_t[0] > test_ts[ts_idx]):
+        while (pos_t[0] > test_ts[ts_idx] and ts_idx <= max_test_ts_idx):
             all_seen_ts.append(test_ts[ts_idx])
-            if (ts_idx < max_test_ts_idx):
-                ts_idx += 1
+            ts_idx += 1
 
-    print (len(all_seen_ts))
-    print (len(all_snapshot_ts))
+    # print (len(all_seen_ts))
+    # print (len(all_snapshot_ts))
 
-    assert all_seen_ts == all_snapshot_ts, "All snapshot timestamps are seen in the correct order"
+    assert all_seen_ts == sorted(all_seen_ts), "All updated snapshots are sorted in ascending order"
+
+    assert all_seen_ts == all_snapshot_ts, "All snapshot timestamps are seen"
 
     
 
