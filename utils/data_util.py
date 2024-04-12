@@ -351,25 +351,26 @@ def load_TGB_dataset(dataset_name: str,
     train_snapshots = {}
     val_snapshots = {}
     test_snapshots = {}
-    train_ts = []
-    val_ts = []
-    test_ts = []
+    #! val_ts should be dictionary of actual index of snapshot and its corresponding timestamp
+    train_ts = {}
+    val_ts = {}
+    test_ts = {}
 
     for i in range(len(ts_list)):
         if ts_list[i] <= last_train_ts:
             train_snapshots[i] = all_snapshots[i]
-            train_ts.append(ts_list[i])
+            train_ts[i] = ts_list[i]
         elif ts_list[i] <= last_val_ts:
             val_snapshots[i] = all_snapshots[i]
-            val_ts.append(ts_list[i])
+            val_ts[i] = ts_list[i]
         else:
             test_snapshots[i] = all_snapshots[i]
-            test_ts.append(ts_list[i])
+            test_ts[i] = ts_list[i]
 
     assert len(train_snapshots) + len(val_snapshots) + len(test_snapshots) == len(all_snapshots), "all snapshots are accounted for"
-    assert train_ts == sorted(train_ts), "train timestamps are sorted"
-    assert val_ts == sorted(val_ts), "val timestamps are sorted"
-    assert test_ts == sorted(test_ts), "test timestamps are sorted"
+    assert list(train_ts.keys()) == sorted(list(train_ts.keys())), "train timestamps are sorted"
+    assert list(val_ts.keys()) == sorted(list(val_ts.keys())), "val timestamps are sorted"
+    assert list(test_ts.keys()) == sorted(list(test_ts.keys())), "test timestamps are sorted"
     
     train_data = process_edges(train_snapshots, num_nodes, train_ts)
     val_data = process_edges(val_snapshots, num_nodes, val_ts)

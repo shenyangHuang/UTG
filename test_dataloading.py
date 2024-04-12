@@ -157,16 +157,14 @@ def test_ctdg_loading():
     test_ts = data['test_data']['ts_map']
 
 
-    all_snapshot_ts = train_ts + val_ts + test_ts
+    all_snapshot_ts = list(train_ts.values()) + list(val_ts.values()) + list(test_ts.values())
     assert all_snapshot_ts == sorted(all_snapshot_ts), "All snapshot timestamps are sorted in ascending order"
 
     all_seen_ts = []
-    assert train_ts[0] < val_ts[0] < test_ts[0], "Train, Val, Test timestamps are in the correct order"
+    assert next(iter(train_ts)) < next(iter(val_ts)) < next(iter(test_ts)), "Train, Val, Test timestamps are in the correct order"
 
-
-    
-    max_train_ts_idx = len(train_ts) -1
-    ts_idx = 0
+    max_train_ts_idx = max(list(train_ts.keys()))
+    ts_idx = min(list(train_ts.keys()))
     for batch in train_loader:
         pos_src, pos_dst, pos_t, pos_msg = (
         batch.src,
@@ -182,11 +180,11 @@ def test_ctdg_loading():
             ts_idx += 1
     #? the final snapshot won't be seen in this way
     #? need to add the last snapshot manually
-    all_seen_ts.append(train_ts[-1])
-                
+    all_seen_ts.append(train_ts[ts_idx])
 
-    max_val_ts_idx = len(val_ts) - 1
-    ts_idx = 0
+
+    max_val_ts_idx = max(list(val_ts.keys()))
+    ts_idx = min(list(val_ts.keys()))
     #! we want to update the snapshot only once when it has first arrived
     for batch in val_loader:
         pos_src, pos_dst, pos_t, pos_msg = (
@@ -201,10 +199,10 @@ def test_ctdg_loading():
             all_seen_ts.append(val_ts[ts_idx])
             ts_idx += 1
     #* need to update with last snapshot
-    all_seen_ts.append(val_ts[-1])
-
-    max_test_ts_idx = len(test_ts) - 1
-    ts_idx = 0
+    all_seen_ts.append(val_ts[ts_idx])
+    
+    max_test_ts_idx = max(list(test_ts.keys()))
+    ts_idx = min(list(test_ts.keys()))
     for batch in test_loader:
         pos_src, pos_dst, pos_t, pos_msg = (
         batch.src,
@@ -218,7 +216,7 @@ def test_ctdg_loading():
             all_seen_ts.append(test_ts[ts_idx])
             ts_idx += 1
     #* need to update with last snapshot
-    all_seen_ts.append(test_ts[-1])
+    all_seen_ts.append(test_ts[ts_idx])
 
     assert all_seen_ts == sorted(all_seen_ts), "All updated snapshots are sorted in ascending order"
     assert all_seen_ts == all_snapshot_ts, "All snapshot timestamps are seen"

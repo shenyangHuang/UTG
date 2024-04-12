@@ -5,8 +5,9 @@ import timeit
 import torch
 import numpy as np
 from torch_geometric.utils.negative_sampling import negative_sampling
-from tgb.linkproppred.dataset import LinkPropPredDataset
+from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
 from tgb.linkproppred.evaluate import Evaluator
+from torch_geometric.loader import TemporalDataLoader
 import wandb
 
 
@@ -83,8 +84,7 @@ class Runner(object):
 
     #! assumes there is no time gap, throws error if so 
     def test_tgb(self, 
-                 full_data, 
-                 test_mask, 
+                 test_loader, 
                  test_snapshots,
                  neg_sampler,
                  evaluator,  
@@ -93,15 +93,6 @@ class Runner(object):
                  split_mode):
         r"""
         TGB evaluation for discrete model
-        1. load the queries from TGB
-        2. remap the ts of the query into integers by discretizing the time
-        prediction loop (per positive edge and its ns samples)
-        a. unattach the node embed
-        b. query the model 
-        c. evaluate the prediction 
-        embedding update step (for true edges)
-        a. get all edges in the snapshot
-        b. forward pass and update the embeddings
 
         Parameters:
             full_data: TGB dataset
@@ -114,48 +105,50 @@ class Runner(object):
             split_mode: the split mode for the negative sampler
         """
         embeddings = embeddings.detach()
-        perf_list = np.zeros(full_data['sources'][test_mask].shape[0])
-        perf_idx = 0
+        perf_list = []
 
         ts_list = test_snapshots['ts_map']
-        ts_idx = 0
-        update = True
+        ts_idx = min(list(ts_list.keys()))
+        max_ts_idx = max(list(ts_list.keys()))
 
-        for pos_src, pos_dst, pos_t in zip(full_data['sources'][test_mask], full_data['destinations'][test_mask], full_data['timestamps'][test_mask]):
+        for pos_batch in test_loader:
+            pos_src, pos_dst, pos_t, pos_msg = (
+                pos_batch.src,
+                pos_batch.dst,
+                pos_batch.t,
+                pos_batch.msg,
+            )
 
-            #* if current timestamp exceeds the update the node embeddings
-            if (pos_t > ts_list[ts_idx] and update == True):
-                #* update the snapshot embedding
+            #* update the model with past snapshots that have passed
+            while (pos_t[0] > ts_list[ts_idx] and ts_idx < max_ts_idx):
                 pos_index = test_snapshots['edge_index'][ts_idx]
                 pos_index = pos_index.long().to(args.device)
                 z = self.model(pos_index, self.x)
                 embeddings = self.model.update_hiddens_all_with(z)
+                ts_idx += 1
 
-                if (ts_idx >= len(ts_list) - 1):
-                    update = False
-                else:
-                    ts_idx += 1
 
-            neg_batch_list = neg_sampler.query_batch(np.array([pos_src]), np.array([pos_dst]), np.array([pos_t]), split_mode=split_mode)
+            neg_batch_list = neg_sampler.query_batch(pos_src, pos_dst, pos_t, split_mode=split_mode)
             
             for idx, neg_batch in enumerate(neg_batch_list):
-                query_src = np.array([int(pos_src) for _ in range(len(neg_batch) + 1)])
-                query_dst = np.concatenate([np.array([int(pos_dst)]), neg_batch])
-                query_src = torch.from_numpy(query_src).long().to(args.device)
-                query_dst = torch.from_numpy(query_dst).long().to(args.device)
+                query_src = torch.full((1 + len(neg_batch),), pos_src[idx], device=args.device)
+                query_dst = torch.tensor(np.concatenate(
+                    ([np.array([pos_dst.cpu().numpy()[idx]]), np.array(neg_batch)]),
+                    axis=0,),
+                device=args.device,)
                 edge_index = torch.stack((query_src, query_dst), dim=0)
                 y_pred = self.loss.predict_link(embeddings, edge_index)
+                # y_pred = y_pred.cpu().detach().numpy()
 
                 input_dict = {
                         "y_pred_pos": np.array([y_pred[0]]),
                         "y_pred_neg": np.array(y_pred[1:]),
                         "eval_metric": [metric],
                     }
-                perf_list[perf_idx] = evaluator.eval(input_dict)[metric]
-                perf_idx += 1
+                perf_list.append(evaluator.eval(input_dict)[metric])
         
         #* update to the final snapshot
-        pos_index = test_snapshots['edge_index'][ts_idx]
+        pos_index = test_snapshots['edge_index'][max_ts_idx]  #last snapshot
         pos_index = pos_index.long().to(args.device)
         z = self.model(pos_index, self.x)
         embeddings = self.model.update_hiddens_all_with(z)
@@ -173,14 +166,13 @@ class Runner(object):
         best_test = 0
         best_epoch = 0
 
+        BATCH_SIZE = 200 #from TGB 
 
-        #* set up TGB queries, this is only for val and test
-        dataset = LinkPropPredDataset(name=args.dataset)
-        full_data = dataset.full_data  
+
+        dataset = PyGLinkPropPredDataset(name=args.dataset, root="datasets")
+        full_data = dataset.get_TemporalData()
         metric = dataset.eval_metric
         neg_sampler = dataset.negative_sampler
-
-
         # get masks
         val_mask = dataset.val_mask
         test_mask = dataset.test_mask
@@ -199,14 +191,6 @@ class Runner(object):
             self.model.train()
             z = None
             snapshot_list = self.train_data['edge_index']
-            """
-            #! significant modification to the training procedure in order to receive test time updates
-            1. feed the true edges from (t-1) into the model and update the embeddings
-            2. use the updated embeddings to predict the edges in t
-            exception is for the first snapshot
-            GNN generates embeddings based on true edges not negative samples
-            """
-
             for snapshot_idx in range(self.train_data['time_length']):
                 pos_index = snapshot_list[snapshot_idx]
                 pos_index = pos_index.long().to(args.device)
@@ -246,12 +230,13 @@ class Runner(object):
             # id_map = self.train_data['id_map'] #remapped node id
 
             dataset.load_val_ns()
-
+            val_data = full_data[val_mask]
+            val_loader = TemporalDataLoader(val_data, batch_size=BATCH_SIZE)
             #* steps for snapshots edges in test set
             #1. discretize the test set into snapshots
             #2. map from integer to unix ts
             val_start_time = timeit.default_timer()
-            val_metrics, z = self.test_tgb(full_data, val_mask, self.val_data, neg_sampler, evaluator, z, metric, 'val')
+            val_metrics, z = self.test_tgb(val_loader, self.val_data, neg_sampler, evaluator, z, metric, 'val')
             val_end_time = timeit.default_timer()
 
              # logging stats
@@ -266,9 +251,6 @@ class Runner(object):
             logger.info("\tValidation: {}: {:.4f}, Elapsed time: {:.4f}".format(metric, val_metrics, val_end_time - val_start_time))
 
  
-    
-
-
             if (args.wandb):
                 wandb.log({"train_loss": average_epoch_loss,
                         "val_" + metric: val_metrics,
@@ -281,8 +263,12 @@ class Runner(object):
                 best_val = val_metrics
                 dataset.load_test_ns()
 
+                test_data = full_data[test_mask]
+                test_loader = TemporalDataLoader(test_data, batch_size=BATCH_SIZE)
+
+
                 test_start_time = timeit.default_timer()
-                test_metrics, z = self.test_tgb(full_data, test_mask, self.test_data, neg_sampler, evaluator, z, metric, 'test')
+                test_metrics, z = self.test_tgb(test_loader, self.test_data, neg_sampler, evaluator, z, metric, 'test')
                 test_end_time = timeit.default_timer()
 
                 logger.info("\tTest: {}: {:.4f}, Elapsed time: {:.4f}".format(metric, test_metrics, test_end_time - test_start_time))
