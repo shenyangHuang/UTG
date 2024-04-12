@@ -8,7 +8,7 @@ Unifying Temporal Graph (UTG) comparison between Continuous Time Dynamic Graphs 
 1. install torch
 
 ```
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
 2. install PyG

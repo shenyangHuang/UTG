@@ -144,7 +144,7 @@ def TGB_data_discrete_processing(dataset_name: str,
 
     if os.path.isfile(data_file):
         print ("--------------------")
-        print ("loading tgx graph", data_file)
+        print ("Loading TGX graph", data_file)
         print ("--------------------")
         dtdg = tgb.utils.utils.load_pkl(data_file)
     else:
@@ -157,7 +157,7 @@ def TGB_data_discrete_processing(dataset_name: str,
             mask = tgx_dataset.val_mask
         elif (split_mode == "test"):
             mask = tgx_dataset.test_mask
-        tgx_dataset.data = tgx_dataset.data[mask] #here only looking at the edges
+        tgx_dataset.data = tgx_dataset.data[mask] # here only looking at the edges
         ctdg = tgx.Graph(tgx_dataset)
 
         dtdg, ts_list = ctdg.discretize(time_scale=time_scale, store_unix=True)
@@ -318,7 +318,7 @@ def load_TGX_dataset(dataset_name: str,
 loading a TGB dataset based on a given discretization
 """
 def load_TGB_dataset(dataset_name: str, 
-                     time_scale: str):  # TODO: @Andy --> TGB data loader needs to be changes as I'm producing snapshots here!
+                     time_scale: str):
     r"""
     load a TGB dataset with discretization
     parameters:
@@ -410,7 +410,7 @@ def loader(dataset='uci', time_scale=None):
         
     elif 'tgb' in dataset:
         train_data, val_data, test_data = load_TGB_dataset(dataset, time_scale=time_scale)
-        print ("INFO: TGB dataset successfully loaded")
+        print ("INFO: Loading TGB dataset: {}".format(dataset))
         data = {
             'train_data': train_data,
             'val_data': val_data,

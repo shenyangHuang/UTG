@@ -233,7 +233,7 @@ def test_ctdg_loading():
 
 if __name__ == '__main__':
 
-    #test_dtdg_loading()
+    test_dtdg_loading()
     test_ctdg_loading()
 
 
