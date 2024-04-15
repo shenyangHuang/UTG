@@ -123,14 +123,15 @@ def test_ctdg_loading():
     r"""
     want to test if the update for each snapshot is inserted at the right time
     """
-    DATA = "tgbl-wiki"
-    time_scale = "hourly"
+    DATA = "tgbl-wiki" #"tgbl-review" 
+    time_scale = "hourly" #"monthly" 
 
 
     from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
     #* TGB dataloading
     dataset = PyGLinkPropPredDataset(name=DATA, root="datasets")
     full_data = dataset.get_TemporalData()
+
     #get masks
     train_mask = dataset.train_mask
     val_mask = dataset.val_mask
@@ -230,8 +231,7 @@ def test_ctdg_loading():
 
 
 if __name__ == '__main__':
-
-    test_dtdg_loading()
+    # test_dtdg_loading()
     test_ctdg_loading()
 
 

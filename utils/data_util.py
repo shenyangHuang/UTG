@@ -200,7 +200,7 @@ def TGB_process_all(dataset_name: str,
     #* generate your own discrete timestamps
     # only keep the training snapshots
     tgx_dataset = tgx.tgb_data(dataset_name)
-    tgx_dataset.data = tgx_dataset.data #here only looking at the edges
+    # tgx_dataset.data = tgx_dataset.data #here only looking at the edges
     ctdg = tgx.Graph(tgx_dataset)
     dtdg, ts_list = ctdg.discretize(time_scale=time_scale, store_unix=True)
     """
@@ -331,7 +331,20 @@ def load_TGB_dataset(dataset_name: str,
     """
 
     #* maybe we should discrete together then split into the train, val snapshots
-    all_snapshots, num_nodes, ts_list = TGB_process_all(dataset_name, time_scale)
+    all_snapshots_original, num_nodes, ts_list = TGB_process_all(dataset_name, time_scale)
+
+    #! need to have the snapshot ids start with 1, it will not start with 0 if the unix timestamp is absolute (meaning documenting real world time), will start at 0 if it is relative (start at 0 for its unix timestamp as well)
+    if (min(list(all_snapshots_original.keys())) != 0):
+        print ("remap snapshot index to start from 0")
+        all_snapshots = {}
+        min_key = min(list(all_snapshots_original.keys()))
+        keys = list(all_snapshots_original.keys())
+        keys.sort()
+        for key in sorted(keys):
+            all_snapshots[key - min_key] = all_snapshots_original[key]
+    else:
+        all_snapshots = all_snapshots_original
+
 
     #* now we break down the snapshots into train, val, test
     from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
@@ -351,10 +364,10 @@ def load_TGB_dataset(dataset_name: str,
     train_snapshots = {}
     val_snapshots = {}
     test_snapshots = {}
-    #! val_ts should be dictionary of actual index of snapshot and its corresponding timestamp
     train_ts = {}
     val_ts = {}
     test_ts = {}
+
 
     for i in range(len(ts_list)):
         if ts_list[i] <= last_train_ts:
@@ -366,6 +379,7 @@ def load_TGB_dataset(dataset_name: str,
         else:
             test_snapshots[i] = all_snapshots[i]
             test_ts[i] = ts_list[i]
+    
 
     assert len(train_snapshots) + len(val_snapshots) + len(test_snapshots) == len(all_snapshots), "all snapshots are accounted for"
     assert list(train_ts.keys()) == sorted(list(train_ts.keys())), "train timestamps are sorted"
@@ -375,21 +389,7 @@ def load_TGB_dataset(dataset_name: str,
     train_data = process_edges(train_snapshots, num_nodes, train_ts)
     val_data = process_edges(val_snapshots, num_nodes, val_ts)
     test_data = process_edges(test_snapshots, num_nodes, test_ts)
-    
-    # train_snapshots, num_nodes, train_ts = TGB_data_discrete_processing(dataset_name, 
-    #                                                                     time_scale, 
-    #                                                                     split_mode="train")
-    # train_data = process_edges(train_snapshots, num_nodes, train_ts)
-
-    # val_snapshots, num_nodes, val_ts = TGB_data_discrete_processing(dataset_name,
-    #                                                                 time_scale,
-    #                                                                 split_mode="val")
-    # val_data = process_edges(val_snapshots, num_nodes, val_ts)
-
-    # test_snapshots, num_nodes, test_ts = TGB_data_discrete_processing(dataset_name,
-    #                                                                     time_scale,
-    #                                                                     split_mode="test")
-    # test_data = process_edges(test_snapshots, num_nodes, test_ts)
+   
     return train_data, val_data, test_data
 
 
