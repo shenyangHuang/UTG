@@ -9,7 +9,7 @@ from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
 from tgb.linkproppred.evaluate import Evaluator
 from torch_geometric.loader import TemporalDataLoader
 import wandb
-
+import math
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
@@ -217,6 +217,13 @@ class Runner(object):
                 z = self.model.update_hiddens_all_with(z) 
             
             average_epoch_loss = np.mean(epoch_losses)
+            #? terminate if the loss is nan
+            if math.isnan(average_epoch_loss):
+                print('nan loss')
+                break
+
+
+
             train_end_time = timeit.default_timer()
 
             #! validation and test code start up, use different logic than training
