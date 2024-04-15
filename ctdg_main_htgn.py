@@ -311,8 +311,8 @@ if __name__ == '__main__':
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
     init_logger(prepare_dir(args.output_folder) + args.dataset + '_timeScale_' + str(args.time_scale) + '_seed_' + str(args.seed) + '.log')
     
-    runner = Runner()
     for seed in range(args.seed, args.seed + args.num_runs):
+        runner = Runner()
         print ("--------------------------------")
         print ("excuting run with seed ", seed)
         runner.run(seed=seed)
