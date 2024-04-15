@@ -121,10 +121,11 @@ class Runner(object):
 
             #* update the model with past snapshots that have passed
             while (pos_t[0] > ts_list[ts_idx] and ts_idx < max_ts_idx):
-                pos_index = test_snapshots['edge_index'][ts_idx]
-                pos_index = pos_index.long().to(args.device)
-                z = self.model(pos_index, self.x)
-                embeddings = self.model.update_hiddens_all_with(z)
+                with torch.no_grad():
+                    pos_index = test_snapshots['edge_index'][ts_idx]
+                    pos_index = pos_index.long().to(args.device)
+                    z = self.model(pos_index, self.x)
+                    embeddings = self.model.update_hiddens_all_with(z)
                 ts_idx += 1
 
 
@@ -137,7 +138,8 @@ class Runner(object):
                     axis=0,),
                 device=args.device,)
                 edge_index = torch.stack((query_src, query_dst), dim=0)
-                y_pred = self.loss.predict_link(embeddings, edge_index)
+                with torch.no_grad():
+                    y_pred = self.loss.predict_link(embeddings, edge_index)
                 # y_pred = y_pred.cpu().detach().numpy()
 
                 input_dict = {
@@ -148,10 +150,11 @@ class Runner(object):
                 perf_list.append(evaluator.eval(input_dict)[metric])
         
         #* update to the final snapshot
-        pos_index = test_snapshots['edge_index'][max_ts_idx]  #last snapshot
-        pos_index = pos_index.long().to(args.device)
-        z = self.model(pos_index, self.x)
-        embeddings = self.model.update_hiddens_all_with(z)
+        with torch.no_grad():
+            pos_index = test_snapshots['edge_index'][max_ts_idx]  #last snapshot
+            pos_index = pos_index.long().to(args.device)
+            z = self.model(pos_index, self.x)
+            embeddings = self.model.update_hiddens_all_with(z)
         perf_metrics = float(np.mean(perf_list))
         return perf_metrics, embeddings
 

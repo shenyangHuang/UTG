@@ -33,6 +33,7 @@ def test_tgb(embeddings,
              ts_list,
              node_feat,
              encoder, 
+             time_encoder,
              decoder,
              neg_sampler,
              evaluator,
@@ -43,8 +44,10 @@ def test_tgb(embeddings,
     decoder.eval()
 
     perf_list = []
-    ts_idx = min(list(ts_list.keys()))
+    min_ts_idx = min(list(ts_list.keys()))
     max_ts_idx = max(list(ts_list.keys()))
+
+    ts_idx = min_ts_idx
 
 
     for batch in test_loader:
@@ -63,6 +66,12 @@ def test_tgb(embeddings,
                 embeddings = encoder(pos_index, x=node_feat) 
                 embeddings = embeddings.detach()
             ts_idx += 1
+        
+        seen_time = 0
+        if (ts_idx > min_ts_idx):
+            seen_time = ts_list[ts_idx - 1]
+        else:
+            seen_time = ts_list[ts_idx]
 
 
         neg_batch_list = neg_sampler.query_batch(np.array(pos_src.cpu()), np.array(pos_dst.cpu()), np.array(pos_t.cpu()), split_mode=split_mode)
@@ -76,7 +85,10 @@ def test_tgb(embeddings,
                         device=args.device,
                     )
             with torch.no_grad():
-                y_pred  = decoder(embeddings[query_src], embeddings[query_dst])
+                rel_t = pos_t[idx].float() - seen_time
+                rel_t = torch.full((query_src.shape[0],), rel_t).to(args.device)
+                time_embed = time_encoder(rel_t)
+                y_pred  = decoder(embeddings[query_src], embeddings[query_dst], time_embed)
             y_pred = y_pred.squeeze(dim=-1).detach()
 
             input_dict = {
@@ -112,7 +124,7 @@ def run(args, data, seed=1):
             # track hyperparameters and run metadata
             config={
             "learning_rate": args.lr,
-            "architecture": "utg_gnn_mlp",
+            "architecture": "utg_gnn_mlp_time",
             "dataset": args.dataset,
             "time granularity": args.time_scale,
             }
@@ -147,17 +159,15 @@ def run(args, data, seed=1):
         num_feat = node_feat.size(1)
     else:
         num_feat = 256
-        # node_feat = torch.ones((full_data.num_nodes,num_feat)).to(args.device)
         node_feat = torch.randn((full_data.num_nodes,num_feat)).to(args.device)
 
 
     time_encoder = TimeEncoder(out_channels=args.time_dim).to(args.device)
     encoder = GCN(in_channels=num_feat, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
-    # decoder = TimeProjDecoder(in_channels=args.hidden_channels, time_dim=args.time_dim, hidden_channels=args.hidden_channels, out_channels=1, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
-    decoder = SimpleLinkPredictor(in_channels=args.hidden_channels).to(args.device)
-    # optimizer = optim.Adam(set(time_encoder.parameters())|set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
-    optimizer = optim.Adam(set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
-    #criterion = torch.nn.BCEWithLogitsLoss()
+    decoder = TimeProjDecoder(in_channels=args.hidden_channels, time_dim=args.time_dim, hidden_channels=args.hidden_channels, out_channels=1, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
+    # decoder = SimpleLinkPredictor(in_channels=args.hidden_channels).to(args.device)
+    optimizer = optim.Adam(set(time_encoder.parameters())|set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
+    # optimizer = optim.Adam(set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
     criterion = torch.nn.MSELoss()
     
     #set to training mode
@@ -180,8 +190,9 @@ def run(args, data, seed=1):
         #define the processed graph snapshots
         train_snapshots = data['train_data']['edge_index']
         ts_list = data['train_data']['ts_map']
-        ts_idx = min(list(ts_list.keys()))
+        min_ts_idx = min(list(ts_list.keys()))
         max_ts_idx = max(list(ts_list.keys()))
+        ts_idx = min_ts_idx
 
         #! start with the embedding from first snapshot, as it is required 
         pos_index = train_snapshots[0]
@@ -207,14 +218,19 @@ def run(args, data, seed=1):
                 device=args.device,
             )
 
-            # time_embed = time_encoder(pos_t.float().to(args.device))
+            seen_time = 0
+            if (ts_idx > min_ts_idx):
+                seen_time = ts_list[ts_idx - 1]
+            else:
+                seen_time = ts_list[ts_idx]
+
+            rel_t = pos_t.float().to(args.device) - seen_time
+            time_embed = time_encoder(rel_t)
             pos_edges = torch.stack([pos_src, pos_dst], dim=0)
             neg_edges = torch.stack([pos_src, neg_dst], dim=0)
 
-            # pos_out = decoder(embeddings[pos_edges[0]], embeddings[pos_edges[1]], time_embed)
-            # neg_out = decoder(embeddings[neg_edges[0]], embeddings[neg_edges[1]], time_embed)
-            pos_out = decoder(embeddings[pos_edges[0]], embeddings[pos_edges[1]])
-            neg_out = decoder(embeddings[neg_edges[0]], embeddings[neg_edges[1]])
+            pos_out = decoder(embeddings[pos_edges[0]], embeddings[pos_edges[1]], time_embed)
+            neg_out = decoder(embeddings[neg_edges[0]], embeddings[neg_edges[1]], time_embed)
 
             loss = criterion(pos_out, torch.ones_like(pos_out))
             loss += criterion(neg_out, torch.zeros_like(neg_out))
@@ -251,7 +267,7 @@ def run(args, data, seed=1):
 
         start_epoch_val = timeit.default_timer()
         val_metrics, embeddings = test_tgb(embeddings, val_loader, val_snapshots, ts_list,
-             node_feat,encoder, decoder,neg_sampler,evaluator,metric, split_mode='val')
+             node_feat,encoder,time_encoder,decoder,neg_sampler,evaluator,metric, split_mode='val')
         val_time = timeit.default_timer() - start_epoch_val
 
         print ("validation metrics is ", val_metrics)
@@ -274,7 +290,7 @@ def run(args, data, seed=1):
 
             test_start_time = timeit.default_timer()
             test_metrics, embeddings = test_tgb(embeddings, test_loader, test_snapshots, ts_list,
-             node_feat,encoder, decoder,neg_sampler,evaluator,metric, split_mode='test')
+             node_feat,encoder,time_encoder,decoder,neg_sampler,evaluator,metric, split_mode='test')
             test_time = timeit.default_timer() - test_start_time
             best_val = val_metrics
             best_test = test_metrics
@@ -304,12 +320,6 @@ def run(args, data, seed=1):
 
 
 
-
-
-
-
-
-        
 
 
 
