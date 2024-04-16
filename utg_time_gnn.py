@@ -13,6 +13,7 @@ from tgb.linkproppred.evaluate import Evaluator
 from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
 from tgb.linkproppred.negative_sampler import NegativeEdgeSampler
 from torch_geometric.loader import TemporalDataLoader
+from torch_geometric.nn.models import GIN
 import torch.optim as optim
 import wandb
 
@@ -64,7 +65,8 @@ def test_tgb(embeddings,
             with torch.no_grad():
                 pos_index = test_snapshots[ts_idx]
                 pos_index = pos_index.long().to(args.device)
-                embeddings = encoder(pos_index, x=node_feat) 
+                # embeddings = encoder(pos_index, x=node_feat) 
+                embeddings = encoder(x=node_feat, edge_index=pos_index) 
                 embeddings = embeddings.detach()
             ts_idx += 1
         
@@ -102,8 +104,9 @@ def test_tgb(embeddings,
     #* update to the final snapshot
     with torch.no_grad():
         pos_index = test_snapshots[ts_idx]
-        pos_index = pos_index.long().to(args.device)
-        embeddings = encoder(pos_index, x=node_feat) 
+        pos_index = pos_index.long().to(args.device) 
+        #embeddings = encoder(pos_index, x=node_feat) 
+        embeddings = encoder(x=node_feat, edge_index=pos_index) 
         embeddings = embeddings.detach()
 
     test_metrics = float(np.mean(np.array(perf_list)))
@@ -164,7 +167,9 @@ def run(args, data, seed=1):
 
 
     time_encoder = TimeEncoder(out_channels=args.time_dim).to(args.device)
-    encoder = GCN(in_channels=num_feat, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
+    #encoder = GCN(in_channels=num_feat, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout).to(args.device)    
+    encoder = GIN(in_channels=num_feat, hidden_channels=args.hidden_channels, num_layers=2, out_channels=args.hidden_channels, dropout=args.dropout, act='relu').to(args.device)  
+    
     decoder = TimeProjDecoder(in_channels=args.hidden_channels, time_dim=args.time_dim, hidden_channels=args.hidden_channels, out_channels=1, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
     optimizer = optim.Adam(set(time_encoder.parameters())|set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
     criterion = torch.nn.MSELoss()
@@ -196,7 +201,8 @@ def run(args, data, seed=1):
         #! start with the embedding from first snapshot, as it is required 
         pos_index = train_snapshots[0]
         pos_index = pos_index.long().to(args.device)
-        embeddings = encoder(pos_index, x=node_feat) 
+        #embeddings = encoder(pos_index, x=node_feat) 
+        embeddings = encoder(x=node_feat, edge_index=pos_index) 
 
         total_loss = 0
         for batch in train_loader:
@@ -244,12 +250,14 @@ def run(args, data, seed=1):
             while (pos_t[0] > ts_list[ts_idx] and ts_idx < max_ts_idx):
                 pos_index = train_snapshots[ts_idx]
                 pos_index = pos_index.long().to(args.device)
-                embeddings = encoder(pos_index, x=node_feat) 
+                # embeddings = encoder(pos_index, x=node_feat)
+                embeddings = encoder(x=node_feat, edge_index=pos_index) 
                 ts_idx += 1
             
             pos_index = train_snapshots[ts_idx]
             pos_index = pos_index.long().to(args.device)
-            embeddings = encoder(pos_index, x=node_feat) 
+            #embeddings = encoder(pos_index, x=node_feat) 
+            embeddings = encoder(x=node_feat, edge_index=pos_index) 
 
         train_time = timeit.default_timer() - start_epoch_train
         print(f"Epoch: {epoch:02d}, Loss: {loss:.4f}, Training elapsed Time (s): {train_time: .4f}")

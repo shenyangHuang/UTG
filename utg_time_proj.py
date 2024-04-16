@@ -64,7 +64,7 @@ def test_tgb(embeddings,
             with torch.no_grad():
                 pos_index = test_snapshots[ts_idx]
                 pos_index = pos_index.long().to(args.device)
-                embeddings = encoder(pos_index, x=node_feat) 
+                embeddings = encoder(x=node_feat, edge_index=pos_index) 
                 embeddings = embeddings.detach()
             ts_idx += 1
         
@@ -103,7 +103,7 @@ def test_tgb(embeddings,
     with torch.no_grad():
         pos_index = test_snapshots[ts_idx]
         pos_index = pos_index.long().to(args.device)
-        embeddings = encoder(pos_index, x=node_feat) 
+        embeddings = encoder(x=node_feat, edge_index=pos_index) 
         embeddings = embeddings.detach()
 
     test_metrics = float(np.mean(np.array(perf_list)))
@@ -196,7 +196,7 @@ def run(args, data, seed=1):
         #! start with the embedding from first snapshot, as it is required 
         pos_index = train_snapshots[0]
         pos_index = pos_index.long().to(args.device)
-        embeddings = encoder(pos_index, x=node_feat) 
+        embeddings = encoder(x=node_feat, edge_index=pos_index) 
 
         total_loss = 0
         for batch in train_loader:
@@ -243,12 +243,12 @@ def run(args, data, seed=1):
             while (pos_t[0] > ts_list[ts_idx] and ts_idx < max_ts_idx):
                 pos_index = train_snapshots[ts_idx]
                 pos_index = pos_index.long().to(args.device)
-                embeddings = encoder(pos_index, x=node_feat) 
+                embeddings = encoder(x=node_feat, edge_index=pos_index) 
                 ts_idx += 1
             
             pos_index = train_snapshots[ts_idx]
             pos_index = pos_index.long().to(args.device)
-            embeddings = encoder(pos_index, x=node_feat) 
+            embeddings = encoder(x=node_feat, edge_index=pos_index) 
 
         train_time = timeit.default_timer() - start_epoch_train
         print(f"Epoch: {epoch:02d}, Loss: {loss:.4f}, Training elapsed Time (s): {train_time: .4f}")
