@@ -11,7 +11,6 @@ import numpy as np
 from torch_geometric.utils.negative_sampling import negative_sampling
 from tgb.linkproppred.evaluate import Evaluator
 from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
-
 from tgb.linkproppred.negative_sampler import NegativeEdgeSampler
 from torch_geometric.loader import TemporalDataLoader
 import torch.optim as optim
@@ -24,6 +23,7 @@ import wandb
 from utils.utils_func import set_random
 from models.gnn_arch import GCN
 from models.decoders import TimeProjDecoder, SimpleLinkPredictor
+from models.time_embed import TimeEmbedding
 from models.tgn.time_enc import TimeEncoder
 
 
@@ -165,9 +165,7 @@ def run(args, data, seed=1):
     time_encoder = TimeEncoder(out_channels=args.time_dim).to(args.device)
     encoder = GCN(in_channels=num_feat, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
     decoder = TimeProjDecoder(in_channels=args.hidden_channels, time_dim=args.time_dim, hidden_channels=args.hidden_channels, out_channels=1, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
-    # decoder = SimpleLinkPredictor(in_channels=args.hidden_channels).to(args.device)
     optimizer = optim.Adam(set(time_encoder.parameters())|set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
-    # optimizer = optim.Adam(set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
     criterion = torch.nn.MSELoss()
     
     #set to training mode
@@ -297,12 +295,13 @@ def run(args, data, seed=1):
 
             print ("test metric is ", test_metrics)
             print ("test elapsed time is ", test_time)
-            print ("--------------------------------")
 
             if ((epoch - best_epoch) >= args.patience and epoch > 1):
                 best_epoch = epoch
                 break
             best_epoch = epoch
+        print ("--------------------------------")
+        
     
     print ("run finishes")
     print ("best epoch is, ", best_epoch)
