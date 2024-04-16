@@ -88,8 +88,8 @@ def test_tgb(embeddings,
             with torch.no_grad():
                 rel_t = pos_t[idx].float() - seen_time
                 rel_t = torch.full((query_src.shape[0],), rel_t).to(args.device)
-                time_embed = time_encoder(rel_t)
-                y_pred  = decoder(embeddings[query_src], embeddings[query_dst], time_embed)
+
+                y_pred  = decoder(time_encoder(embeddings[query_src], rel_t), time_encoder(embeddings[query_dst],rel_t))
             y_pred = y_pred.squeeze(dim=-1).detach()
 
             input_dict = {
@@ -163,9 +163,9 @@ def run(args, data, seed=1):
         node_feat = torch.randn((full_data.num_nodes,num_feat)).to(args.device)
 
 
-    time_encoder = TimeEncoder(out_channels=args.time_dim).to(args.device)
+    time_encoder = TimeEmbedding(in_channels=args.hidden_channels, out_channels=args.hidden_channels).to(args.device)
     encoder = GCN(in_channels=num_feat, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
-    decoder = TimeProjDecoder(in_channels=args.hidden_channels, time_dim=args.time_dim, hidden_channels=args.hidden_channels, out_channels=1, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
+    decoder = SimpleLinkPredictor(in_channels=args.hidden_channels).to(args.device)
     optimizer = optim.Adam(set(time_encoder.parameters())|set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
     criterion = torch.nn.MSELoss()
     
@@ -224,12 +224,11 @@ def run(args, data, seed=1):
                 seen_time = ts_list[ts_idx]
 
             rel_t = pos_t.float().to(args.device) - seen_time
-            time_embed = time_encoder(rel_t)
             pos_edges = torch.stack([pos_src, pos_dst], dim=0)
             neg_edges = torch.stack([pos_src, neg_dst], dim=0)
 
-            pos_out = decoder(embeddings[pos_edges[0]], embeddings[pos_edges[1]], time_embed)
-            neg_out = decoder(embeddings[neg_edges[0]], embeddings[neg_edges[1]], time_embed)
+            pos_out = decoder(time_encoder(embeddings[pos_edges[0]],rel_t), time_encoder(embeddings[pos_edges[1]],rel_t))
+            neg_out = decoder(time_encoder(embeddings[neg_edges[0]],rel_t), time_encoder(embeddings[neg_edges[1]],rel_t))
 
             loss = criterion(pos_out, torch.ones_like(pos_out))
             loss += criterion(neg_out, torch.zeros_like(neg_out))
