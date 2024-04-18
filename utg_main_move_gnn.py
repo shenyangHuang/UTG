@@ -165,7 +165,7 @@ def run(args, data, seed=1):
         node_feat = torch.randn((full_data.num_nodes,num_feat)).to(args.device)
 
 
-    context_size = 2
+    context_size = 4
     encoder = GCN(in_channels=num_feat, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
    
     decoder = SimpleLinkPredictor(in_channels=int(args.hidden_channels*context_size)).to(args.device)
