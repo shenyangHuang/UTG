@@ -1,4 +1,5 @@
 """
+python utg_main_move_gnn.py --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 200 --seed 1 --num_runs 1 --patience 20
 design a basic encoder and decoder framework for ctdg for example
 the encoder is a simple GNN
 the decoder is a simple MLP
@@ -78,8 +79,20 @@ def test_tgb(embeddings,
                         ),
                         device=args.device,
                     )
+            
+            #? organize the past context
+            query_src_embed_list = []
+            query_dst_embed_list = []
+
+            for k in range(context_size):
+                query_src_embed_list.append(embeddings[k][query_src])
+                query_dst_embed_list.append(embeddings[k][query_dst])
+            
+            query_src_embed = torch.cat(query_src_embed_list, dim=1)
+            query_dst_embed = torch.cat(query_dst_embed_list, dim=1)
+
             with torch.no_grad():
-                y_pred  = decoder(embeddings[query_src], embeddings[query_dst])
+                y_pred  = decoder(query_src_embed, query_dst_embed)
             y_pred = y_pred.squeeze(dim=-1).detach()
 
             input_dict = {
