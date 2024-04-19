@@ -8,29 +8,6 @@ from tgb.linkproppred.negative_sampler import NegativeEdgeSampler
 import wandb
 import timeit
 
-
-
-# class RecurrentGCN(torch.nn.Module):
-#     def __init__(self, node_feat_dim, hidden_dim, K=1):
-#         #https://pytorch-geometric-temporal.readthedocs.io/en/latest/modules/root.html#recurrent-graph-convolutional-layers
-#         super(RecurrentGCN, self).__init__()
-#         self.recurrent = GCLSTM(in_channels=node_feat_dim, 
-#                                 out_channels=hidden_dim, 
-#                                 K=K,) #K is the Chebyshev filter size
-#         self.linear = torch.nn.Linear(hidden_dim, hidden_dim)
-
-#     def forward(self, x, edge_index, edge_weight, h, c):
-#         r"""
-#         forward function for the model, 
-#         this is used for each snapshot
-#         h: node hidden state matrix from previous time
-#         c: cell state matrix from previous time
-#         """
-#         h_0, c_0 = self.recurrent(x, edge_index, edge_weight, h, c)
-#         h = F.relu(h_0)
-#         h = self.linear(h)
-#         return h, h_0, c_0
-
 #https://github.com/benedekrozemberczki/pytorch_geometric_temporal/blob/master/examples/recurrent/evolvegcno_example.py
 class RecurrentGCN(torch.nn.Module):
     def __init__(self, node_feat_dim, hidden_dim):
