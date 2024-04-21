@@ -226,12 +226,6 @@ def test_ctdg_loading():
     assert all_seen_ts == sorted(all_seen_ts), "All updated snapshots are sorted in ascending order"
     assert all_seen_ts == all_snapshot_ts, "All snapshot timestamps are seen"
 
-    
-
-
-    
-
-
 
 
 if __name__ == '__main__':
