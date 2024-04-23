@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=long #unkillable #main #long
-#SBATCH --output=gcn_review_2e4.txt 
-#SBATCH --error=gcn_review_2e4_error.txt 
+#SBATCH --output=gcn_wiki_2e4.txt 
+#SBATCH --error=gcn_wiki_2e4_error.txt 
 #SBATCH --cpus-per-task=4                     # Ask for 4 CPUs
 #SBATCH --gres=gpu:1                  # Ask for 1 titan xp gpu:rtx8000:1 
 #SBATCH --mem=32G #64G                             # Ask for 32 GB of RAM
@@ -16,9 +16,9 @@ pwd
 
 #* for GCN
 
-# python utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20
+python utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 2e-4 --max_epoch 500 --seed 1 --num_runs 5 --patience 50
 
-python utg_main_gnn.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20
+# python utg_main_gnn.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20
 
 
 
