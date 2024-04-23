@@ -4,6 +4,7 @@ import time
 import timeit
 import torch
 import numpy as np
+import torch.nn.functional as F
 from torch_geometric_temporal.nn.recurrent import GCLSTM 
 from torch_geometric.utils.negative_sampling import negative_sampling
 from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
@@ -354,19 +355,54 @@ class Runner(object):
 
 if __name__ == '__main__':
     from utils.configs import args
-    from utils.log_utils import logger, init_logger
     from utils.utils_func import set_random
-    from models.load_model import load_model
-    from models.loss import ReconLoss, VGAEloss
-    from utils.data_util import loader, prepare_dir
+    from utils.data_util import loader
 
     set_random(args.seed)
+
+    if args.wandb:
+        wandb.init(
+            # set the wandb project where this run will be logged
+            project="utg",
+            
+            # track hyperparameters and run metadata
+            config={
+            "learning_rate": args.lr,
+            "architecture": "gclstm",
+            "dataset": args.dataset,
+            "time granularity": args.time_scale,
+            }
+        )
+    
+    #? load the discretized version of the dataset
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
-    init_logger(prepare_dir(args.output_folder) + args.dataset + '_timeScale_' + str(args.time_scale) + '_seed_' + str(args.seed) + '.log')
+    train_data = data['train_data']
+    val_data = data['val_data']
+    test_data = data['test_data']
+    num_nodes = data['train_data']['num_nodes'] + 1
+    num_epochs = args.max_epoch
+    lr = args.lr
+
+    #? load the continuous version of the dataset
+    dataset = PyGLinkPropPredDataset(name=args.dataset, root="datasets")
+    full_data = dataset.get_TemporalData()
+    metric = dataset.eval_metric
+    neg_sampler = dataset.negative_sampler
+    # get masks
+    val_mask = dataset.val_mask
+    test_mask = dataset.test_mask
+
+    evaluator = Evaluator(name=args.dataset)
+
+    #* add node feat support for TGB datasets
+    hidden_dim = 256
+    node_feat = dataset.node_feat
+    node_feat_dim = node_feat.shape[1] #for node features
+    edge_feat_dim = 1 #for edge weights
     
     for seed in range(args.seed, args.seed + args.num_runs):
-        runner = Runner()
-        print ("--------------------------------")
-        print ("excuting run with seed ", seed)
-        runner.run(seed=seed)
-        print ("--------------------------------")
+        set_random(seed)
+        print (f"Run {seed}")
+
+        #* initialization of the model to prep for training
+        model = RecurrentGCN(node_feat_dim=node_feat_dim, hidden_dim=hidden_dim, K=1).to(args.device)
