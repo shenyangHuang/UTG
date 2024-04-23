@@ -320,7 +320,7 @@ if __name__ == '__main__':
     for seed in range(args.seed, args.seed + args.num_runs):
         print ("--------------------------------")
         print ("excuting run with seed ", seed)
-        run(args, data, seed=args.seed)
+        run(args, data, seed=seed)
         print ("--------------------------------")
 
     
