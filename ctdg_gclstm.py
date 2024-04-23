@@ -4,6 +4,7 @@ import time
 import timeit
 import torch
 import numpy as np
+from torch_geometric_temporal.nn.recurrent import GCLSTM 
 from torch_geometric.utils.negative_sampling import negative_sampling
 from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
 from tgb.linkproppred.evaluate import Evaluator
@@ -14,6 +15,55 @@ import math
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
+
+
+class RecurrentGCN(torch.nn.Module):
+    def __init__(self, node_feat_dim, hidden_dim, K=1):
+        #https://pytorch-geometric-temporal.readthedocs.io/en/latest/modules/root.html#recurrent-graph-convolutional-layers
+        super(RecurrentGCN, self).__init__()
+        self.recurrent = GCLSTM(in_channels=node_feat_dim, 
+                                out_channels=hidden_dim, 
+                                K=K,) #K is the Chebyshev filter size
+        self.linear = torch.nn.Linear(hidden_dim, hidden_dim)
+
+    def forward(self, x, edge_index, edge_weight, h, c):
+        r"""
+        forward function for the model, 
+        this is used for each snapshot
+        h: node hidden state matrix from previous time
+        c: cell state matrix from previous time
+        """
+        h_0, c_0 = self.recurrent(x, edge_index, edge_weight, h, c)
+        h = F.relu(h_0)
+        h = self.linear(h)
+        return h, h_0, c_0
+
+
+class LinkPredictor(torch.nn.Module):
+    def __init__(self, in_channels, hidden_channels, out_channels, num_layers,
+                 dropout):
+        super(LinkPredictor, self).__init__()
+
+        self.lins = torch.nn.ModuleList()
+        self.lins.append(torch.nn.Linear(in_channels, hidden_channels))
+        for _ in range(num_layers - 2):
+            self.lins.append(torch.nn.Linear(hidden_channels, hidden_channels))
+        self.lins.append(torch.nn.Linear(hidden_channels, out_channels))
+
+        self.dropout = dropout
+
+    def reset_parameters(self):
+        for lin in self.lins:
+            lin.reset_parameters()
+
+    def forward(self, x_i, x_j):
+        x = x_i * x_j
+        for lin in self.lins[:-1]:
+            x = lin(x)
+            x = F.relu(x)
+            x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.lins[-1](x)
+        return torch.sigmoid(x)
 
 
 

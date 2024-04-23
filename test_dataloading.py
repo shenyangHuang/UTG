@@ -157,6 +157,10 @@ def test_ctdg_loading():
     test_snapshots = data['test_data']['edge_index']
     test_ts = data['test_data']['ts_map']
 
+    assert len(train_snapshots) == len(train_ts), "Train snapshots and timestamps are the same length"
+    assert len(val_snapshots) == len(val_ts), "Val snapshots and timestamps are the same length"
+    assert len(test_snapshots) == len(test_ts), "Test snapshots and timestamps are the same length"
+
 
     all_snapshot_ts = list(train_ts.values()) + list(val_ts.values()) + list(test_ts.values())
     assert all_snapshot_ts == sorted(all_snapshot_ts), "All snapshot timestamps are sorted in ascending order"
@@ -221,12 +225,6 @@ def test_ctdg_loading():
 
     assert all_seen_ts == sorted(all_seen_ts), "All updated snapshots are sorted in ascending order"
     assert all_seen_ts == all_snapshot_ts, "All snapshot timestamps are seen"
-
-    
-
-
-    
-
 
 
 
