@@ -120,7 +120,7 @@ def run(args, data, seed=1):
 
 
     set_random(seed)
-    batch_size = 200
+    batch_size = args.batch_size
 
     #ctdg dataset
     dataset = PyGLinkPropPredDataset(name=args.dataset, root="datasets")

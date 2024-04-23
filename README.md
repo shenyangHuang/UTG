@@ -140,12 +140,13 @@ python dtdg_egcno.py --dataset=canparl -t biyearly --lr 2e-4 --max_epoch 500 --n
 
 
 
-5. UTG with basic GNN encoder and MLP decoder
+5. basic GCN encoder and MLP decoder with test update
 
 ```
-python utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 200 --seed 1 --num_runs 1 --patience 20
+python utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 2e-4 --max_epoch 500 --seed 1 --num_runs 5 --patience 50 --batch_size 200
 
-python utg_main_gnn.py --dataset=tgbl-review -t monthly --lr 0.001 --max_epoch 200 --seed 1 --num_runs 1 --patience 20
+python utg_main_gnn.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20 --batch_size 1000
+
 ```
 
 

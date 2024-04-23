@@ -13,6 +13,7 @@ parser.add_argument('-t', '--time_scale', type=str, default='hourly', help='Time
                     choices=['minutely', 'hourly', 'daily', 'weekly', 'monthly', 'yearly', 'biyearly'])
 parser.add_argument("--wandb", action="store_true", default=False, help="now using wandb")
 parser.add_argument('--num_runs', type=int, default=1, help='number of runs')
+parser.add_argument('--batch_size', type=int, help='Batch size, for CTDGs only', default=200)
 
 # 2.experiments
 parser.add_argument('--max_epoch', type=int, default=100, help='number of epochs to train.')
