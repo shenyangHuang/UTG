@@ -1,5 +1,6 @@
 """
 design a basic encoder and decoder framework for ctdg for example
+python utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 200 --seed 1 --num_runs 1 --patience 20
 the encoder is a simple GNN
 the decoder is a simple MLP
 """
