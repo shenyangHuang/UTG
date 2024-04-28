@@ -177,13 +177,13 @@ if __name__ == '__main__':
                 loss.backward()
                 optimizer.step()
 
-                total_loss += float(loss)
+                total_loss += (float(loss) / pos_index.shape[1])
 
 
                 h_0 = h_0.detach()
                 c_0 = c_0.detach()
 
-            print (f'Epoch {epoch}/{num_epochs}, Loss: {total_loss/num_nodes}')
+            print (f'Epoch {epoch}/{num_epochs}, Loss: {total_loss}')
 
             train_time = timeit.default_timer() - train_start_time
             #! Evaluation starts here
@@ -257,7 +257,7 @@ if __name__ == '__main__':
             print(f"Val {metric}: {val_metrics}")
             print ("Val time: ", val_time)
             if (args.wandb):
-                wandb.log({"train_loss":(total_loss/num_nodes),
+                wandb.log({"train_loss":(total_loss),
                         "val_" + metric: val_metrics,
                         "train time": train_time,
                         "val time": val_time,

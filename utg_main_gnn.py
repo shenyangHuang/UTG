@@ -55,16 +55,6 @@ def test_tgb(embeddings,
         batch.msg,
         )
 
-        #! update the model now if the prediction batch has moved to next snapshot
-        while (pos_t[0] > ts_list[ts_idx] and ts_idx < max_ts_idx):
-            with torch.no_grad():
-                pos_index = test_snapshots[ts_idx]
-                pos_index = pos_index.long().to(args.device)
-                embeddings = encoder(x=node_feat, edge_index=pos_index) 
-                embeddings = embeddings.detach()
-            ts_idx += 1
-
-
         neg_batch_list = neg_sampler.query_batch(np.array(pos_src.cpu()), np.array(pos_dst.cpu()), np.array(pos_t.cpu()), split_mode=split_mode)
         for idx, neg_batch in enumerate(neg_batch_list):
             query_src = torch.full((1 + len(neg_batch),), pos_src[idx], device=args.device)
@@ -85,6 +75,15 @@ def test_tgb(embeddings,
             "eval_metric": [metric],
             }
             perf_list.append(evaluator.eval(input_dict)[metric])
+        
+        #* update the model at the end of the batch to see if a snapshot has been passed
+        while (pos_t[-1] > ts_list[ts_idx] and ts_idx < max_ts_idx):
+            with torch.no_grad():
+                pos_index = test_snapshots[ts_idx]
+                pos_index = pos_index.long().to(args.device)
+                embeddings = encoder(x=node_feat, edge_index=pos_index) 
+                embeddings = embeddings.detach()
+            ts_idx += 1
 
     #* update to the final snapshot
     with torch.no_grad():
@@ -166,6 +165,10 @@ def run(args, data, seed=1):
     best_epoch = 0
     best_val = 0
     best_test = 0
+
+
+    #! train with snapshots or train with batches of edges??????
+    
     
 
     for epoch in range(1, args.max_epoch + 1):
