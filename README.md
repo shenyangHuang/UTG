@@ -149,6 +149,18 @@ python utg_main_gnn.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 20
 
 ```
 
+6. CTDG commands for dt datasets
+```
+python ctdg_egcno.py --dataset=tgbl-wiki -t hourly --lr 2e-4 --max_epoch 500 --seed 1 --num_runs 5 --patience 50 --batch_size 200
+
+python ctdg_egcno.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20 --batch_size 200
+
+python ctdg_gslstm.py --dataset=tgbl-wiki -t hourly --lr 2e-4 --max_epoch 500 --seed 1 --num_runs 5 --patience 50 --batch_size 200
+
+python ctdg_gclstm.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20 --batch_size 200
+```
+
+
 
 
 ## Get Started with TGB Datasets

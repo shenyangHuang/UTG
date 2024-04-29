@@ -199,7 +199,7 @@ if __name__ == '__main__':
         node_feat_dim = 256
         node_feat = torch.randn((full_data.num_nodes,node_feat_dim)).to(args.device)
 
-    edge_feat_dim = full_data.msg.size(-1) #for edge weights
+    edge_feat_dim = 1
     hidden_dim = 256
 
     #* load the discretized version
