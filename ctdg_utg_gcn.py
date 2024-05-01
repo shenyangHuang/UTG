@@ -97,6 +97,136 @@ def test_tgb(embeddings,
     return test_metrics, embeddings
 
 
+def train_in_batches(
+        args, 
+        data, 
+        encoder, 
+        decoder, 
+        optimizer, 
+        criterion, 
+        train_loader, 
+        node_feat, 
+        min_dst_idx, 
+        max_dst_idx
+        ):
+    embeddings = None
+
+    #define the processed graph snapshots
+    train_snapshots = data['train_data']['edge_index']
+    ts_list = data['train_data']['ts_map']
+    ts_idx = min(list(ts_list.keys()))
+    max_ts_idx = max(list(ts_list.keys()))
+
+    #! start with the embedding from first snapshot, as it is required 
+    pos_index = train_snapshots[0]
+    pos_index = pos_index.long().to(args.device)
+    embeddings = encoder(x=node_feat, edge_index=pos_index) 
+
+    total_loss = 0
+    for batch in train_loader:
+        optimizer.zero_grad()
+        pos_src, pos_dst, pos_t, pos_msg = (
+        batch.src,
+        batch.dst,
+        batch.t,
+        batch.msg,
+        )
+        #* get the negative samples
+        # Sample negative destination nodes.
+        neg_dst = torch.randint(
+            min_dst_idx,
+            max_dst_idx + 1,
+            (pos_src.size(0),),
+            dtype=torch.long,
+            device=args.device,
+        )
+
+        pos_edges = torch.stack([pos_src, pos_dst], dim=0)
+        neg_edges = torch.stack([pos_src, neg_dst], dim=0)
+
+        pos_out = decoder(embeddings[pos_edges[0]], embeddings[pos_edges[1]])
+        neg_out = decoder(embeddings[neg_edges[0]], embeddings[neg_edges[1]])
+
+        loss = criterion(pos_out, torch.ones_like(pos_out))
+        loss += criterion(neg_out, torch.zeros_like(neg_out))
+
+        total_loss += (float(loss) / batch.num_events)
+
+        #! due to time encoding is used in each batch, to train it correctly, backprop each batch
+        loss.backward()
+        optimizer.step()
+
+        #? it is possible to cover multiple snapshots in a batch
+        while (pos_t[0] > ts_list[ts_idx] and ts_idx < max_ts_idx):
+            pos_index = train_snapshots[ts_idx]
+            pos_index = pos_index.long().to(args.device)
+            embeddings = encoder(x=node_feat, edge_index=pos_index) 
+            ts_idx += 1
+        
+        pos_index = train_snapshots[ts_idx]
+        pos_index = pos_index.long().to(args.device)
+        embeddings = encoder(x=node_feat, edge_index=pos_index) 
+    embeddings = embeddings.detach()
+
+    return total_loss, embeddings
+
+
+def train_with_snapshots(
+        args, 
+        data, 
+        encoder, 
+        decoder, 
+        optimizer, 
+        criterion, 
+        train_data, 
+        node_feat, 
+        num_nodes
+    ):
+    embeddings = None
+    #set to training mode
+    encoder.train()
+    decoder.train()
+    optimizer.zero_grad()
+    total_loss = 0
+
+    #define the processed graph snapshots
+    train_snapshots = data['train_data']['edge_index']
+
+    for snapshot_idx in range(len(train_snapshots)):
+        optimizer.zero_grad()
+        if (snapshot_idx == 0): #first snapshot, feed the current snapshot
+            cur_index = train_snapshots[snapshot_idx]
+            cur_index = cur_index.long().to(args.device)
+            embeddings = encoder(x=node_feat, edge_index=cur_index) 
+        else:
+            prev_index = train_snapshots[snapshot_idx-1]
+            prev_index = prev_index.long().to(args.device)
+            embeddings = encoder(x=node_feat, edge_index=prev_index)
+        
+        pos_index = train_snapshots[snapshot_idx]
+        pos_index = pos_index.long().to(args.device)
+
+        neg_dst = torch.randint(
+            0,
+            num_nodes,
+            (pos_index.shape[1],),
+            dtype=torch.long,
+            device=args.device,
+        )
+
+        pos_out = decoder(embeddings[pos_index[0]], embeddings[pos_index[1]])
+        neg_out = decoder(embeddings[pos_index[0]], embeddings[neg_dst])
+
+        loss = criterion(pos_out, torch.ones_like(pos_out))
+        loss += criterion(neg_out, torch.zeros_like(neg_out))
+
+        loss.backward()
+        optimizer.step()
+
+        total_loss += (float(loss) / pos_index.shape[1])
+    
+    embeddings = embeddings.detach()
+    return total_loss, embeddings
 
 
 
@@ -148,6 +278,7 @@ def run(args, data, seed=1):
         num_feat = 256
         # node_feat = torch.ones((full_data.num_nodes,num_feat)).to(args.device)
         node_feat = torch.randn((full_data.num_nodes,num_feat)).to(args.device)
+        num_nodes = full_data.num_nodes
 
 
     encoder = GCN(in_channels=num_feat, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
@@ -173,69 +304,35 @@ def run(args, data, seed=1):
 
     for epoch in range(1, args.max_epoch + 1):
         start_epoch_train = timeit.default_timer()
-        embeddings = None
 
-        #define the processed graph snapshots
-        train_snapshots = data['train_data']['edge_index']
-        ts_list = data['train_data']['ts_map']
-        ts_idx = min(list(ts_list.keys()))
-        max_ts_idx = max(list(ts_list.keys()))
+        # total_loss, embeddings = train_in_batches(
+        #     args, 
+        #     data, 
+        #     encoder, 
+        #     decoder, 
+        #     optimizer, 
+        #     criterion, 
+        #     train_loader, 
+        #     node_feat, 
+        #     min_dst_idx, 
+        #     max_dst_idx
+        #     )
 
-        #! start with the embedding from first snapshot, as it is required 
-        pos_index = train_snapshots[0]
-        pos_index = pos_index.long().to(args.device)
-        embeddings = encoder(x=node_feat, edge_index=pos_index) 
-
-        total_loss = 0
-        for batch in train_loader:
-            optimizer.zero_grad()
-            pos_src, pos_dst, pos_t, pos_msg = (
-            batch.src,
-            batch.dst,
-            batch.t,
-            batch.msg,
-            )
-            #* get the negative samples
-            # Sample negative destination nodes.
-            neg_dst = torch.randint(
-                min_dst_idx,
-                max_dst_idx + 1,
-                (pos_src.size(0),),
-                dtype=torch.long,
-                device=args.device,
-            )
-
-            pos_edges = torch.stack([pos_src, pos_dst], dim=0)
-            neg_edges = torch.stack([pos_src, neg_dst], dim=0)
-
-            pos_out = decoder(embeddings[pos_edges[0]], embeddings[pos_edges[1]])
-            neg_out = decoder(embeddings[neg_edges[0]], embeddings[neg_edges[1]])
-
-            loss = criterion(pos_out, torch.ones_like(pos_out))
-            loss += criterion(neg_out, torch.zeros_like(neg_out))
-
-            total_loss += float(loss) * batch.num_events
-
-            #! due to time encoding is used in each batch, to train it correctly, backprop each batch
-            loss.backward()
-            optimizer.step()
-
-            #? it is possible to cover multiple snapshots in a batch
-            while (pos_t[0] > ts_list[ts_idx] and ts_idx < max_ts_idx):
-                pos_index = train_snapshots[ts_idx]
-                pos_index = pos_index.long().to(args.device)
-                embeddings = encoder(x=node_feat, edge_index=pos_index) 
-                ts_idx += 1
-            
-            pos_index = train_snapshots[ts_idx]
-            pos_index = pos_index.long().to(args.device)
-            embeddings = encoder(x=node_feat, edge_index=pos_index) 
+        total_loss, embeddings = train_with_snapshots(
+            args, 
+            data, 
+            encoder, 
+            decoder, 
+            optimizer, 
+            criterion, 
+            train_data, 
+            node_feat, 
+            num_nodes,
+        )
 
         train_time = timeit.default_timer() - start_epoch_train
-        print(f"Epoch: {epoch:02d}, Loss: {loss:.4f}, Training elapsed Time (s): {train_time: .4f}")
-        print ("training loss is ", total_loss / train_data.num_events)
-        embeddings = embeddings.detach()
-
+        print(f"Epoch: {epoch:02d}, Loss: {(total_loss):.4f}, Training elapsed Time (s): {train_time: .4f}")
+        print ("training loss is ", total_loss)
 
         val_snapshots = data['val_data']['edge_index']
         ts_list = data['val_data']['ts_map']
