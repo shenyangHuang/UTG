@@ -305,30 +305,30 @@ def run(args, data, seed=1):
     for epoch in range(1, args.max_epoch + 1):
         start_epoch_train = timeit.default_timer()
 
-        # total_loss, embeddings = train_in_batches(
-        #     args, 
-        #     data, 
-        #     encoder, 
-        #     decoder, 
-        #     optimizer, 
-        #     criterion, 
-        #     train_loader, 
-        #     node_feat, 
-        #     min_dst_idx, 
-        #     max_dst_idx
-        #     )
-
-        total_loss, embeddings = train_with_snapshots(
+        total_loss, embeddings = train_in_batches(
             args, 
             data, 
             encoder, 
             decoder, 
             optimizer, 
             criterion, 
-            train_data, 
+            train_loader, 
             node_feat, 
-            num_nodes,
-        )
+            min_dst_idx, 
+            max_dst_idx
+            )
+
+        # total_loss, embeddings = train_with_snapshots(
+        #     args, 
+        #     data, 
+        #     encoder, 
+        #     decoder, 
+        #     optimizer, 
+        #     criterion, 
+        #     train_data, 
+        #     node_feat, 
+        #     num_nodes,
+        # )
 
         train_time = timeit.default_timer() - start_epoch_train
         print(f"Epoch: {epoch:02d}, Loss: {(total_loss):.4f}, Training elapsed Time (s): {train_time: .4f}")
