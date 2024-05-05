@@ -4,7 +4,7 @@ import time
 import timeit
 import torch
 import numpy as np
-from torch_geometric.utils.negative_sampling import negative_sampling
+from torch_geometric.utils import negative_sampling
 from tgb.linkproppred.dataset import LinkPropPredDataset
 from tgb.linkproppred.evaluate import Evaluator
 import wandb
@@ -41,6 +41,9 @@ class Runner(object):
         #* for tgb dataset, we will convert the val and test set on the fly here instead of loading. 
         self.val_data = data['val_data']
         self.test_data = data['test_data']
+        
+        print("DEBUG: self.val_data['ts_map']:", self.val_data['ts_map'])
+        print("DEBUG: self.test_data['ts_map']:", self.test_data['ts_map'])
 
 
         args.num_nodes = data['train_data']['num_nodes'] + int(0.1 * data['train_data']['num_nodes']) # make it larger to fit the inductive nodes
@@ -120,6 +123,8 @@ class Runner(object):
         ts_list = test_snapshots['ts_map']
         ts_idx = 0
         update = True
+
+        print("DEBUG: ts_list:", ts_list)
 
         for pos_src, pos_dst, pos_t in zip(full_data['sources'][test_mask], full_data['destinations'][test_mask], full_data['timestamps'][test_mask]):
 
