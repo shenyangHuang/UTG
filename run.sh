@@ -60,7 +60,6 @@ CUDA_VISIBLE_DEVICES=0 python -u dtdg_utg_gcn.py --dataset contacts -t hourly --
 
 # CUDA_VISIBLE_DEVICES=0 python -u ctdg_egcno.py --dataset=tgbl-review -t monthly --lr 1e-3 --max_epoch 200 --seed 1 --num_runs 5 --patience 20 --batch_size 200
 
-
 # CUDA_VISIBLE_DEVICES=0 python -u dtdg_egcno.py --dataset=enron -t monthly --lr 1e-3 --max_epoch 500 --num_runs 5 --patience 100
 
 # CUDA_VISIBLE_DEVICES=0 python -u dtdg_egcno.py --dataset=uci -t weekly --lr 1e-3 --max_epoch 500 --num_runs 5 --patience 100
