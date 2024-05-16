@@ -9,27 +9,38 @@ plt.rcParams["font.family"] = "serif"
 
 methods = ["TGN", "DyGFormer", "NAT", "GraphMixer", "HTGN", "GCLSTM", "EGCN", "GCN"]
 
-# UCI_test_MRRs = [0.091, 0.334, 0.356, 0.105, 0.093, 0.093, 0.121, 0.068]
-# UCI_inference_time = [1.07, 155.58, 3.82, 32.88, 0.61, 0.35, 0.43, 0.50]
-# EdgeBank = 0.165
-
-# dfs = pd.DataFrame(data={'method': methods, 
-#                          'MRR': UCI_test_MRRs, 
-#                          'time': UCI_inference_time,})
-
-
-
-enron_test_MRRs = [0.191, 0.331, 0.276, 0.296, 0.267, 0.170, 0.233, 0.164]
-enron_inference_time = [1.71, 57.72, 8.39, 13.85, 0.87, 0.46, 0.45, 0.31 ]
-EdgeBank = 0.157 
+UCI_test_MRRs = [0.091, 0.334, 0.356, 0.105, 0.093, 0.093, 0.121, 0.068]
+UCI_inference_time = [1.07, 155.58, 3.82, 32.88, 0.61, 0.35, 0.43, 0.50]
+EdgeBank = 0.165
 
 dfs = pd.DataFrame(data={'method': methods, 
-                         'MRR': enron_test_MRRs, 
-                         'time': enron_inference_time,})
+                         'MRR': UCI_test_MRRs, 
+                         'time': UCI_inference_time,})
 
 
 
-fig, axes = plt.subplots(1, 2, figsize=(18,5))
+# enron_test_MRRs = [0.191, 0.331, 0.276, 0.296, 0.267, 0.170, 0.233, 0.164]
+# enron_inference_time = [1.71, 57.72, 8.39, 13.85, 0.87, 0.46, 0.45, 0.31 ]
+# EdgeBank = 0.157 
+
+# dfs = pd.DataFrame(data={'method': methods, 
+#                          'MRR': enron_test_MRRs, 
+#                          'time': enron_inference_time,})
+
+
+
+# social_evo_test_MRRs = [0.283,0.366, 0.258, 0.157, 0.228, 0.286, 0.253, 0.289]
+# social_evo_inference_time = [ 24.04, 349.22, 148.43, 132.39, 14.59, 9.27, 7.35, 6.40]
+# EdgeBank = 0.070
+
+# dfs = pd.DataFrame(data={'method': methods, 
+#                          'MRR': social_evo_test_MRRs, 
+#                          'time': social_evo_inference_time,})
+
+
+
+
+fig, axes = plt.subplots(1, 2, figsize=(20,5))
 axes[0].set_title('Test MRR')
 
 
@@ -56,8 +67,9 @@ for i in axes[1].containers:
     axes[1].bar_label(i,)
 
 # plt.legend()
-# plt.savefig("UCI.pdf")
-plt.savefig("enron.pdf")
+plt.savefig("UCI.pdf")
+# plt.savefig("enron.pdf")
+# plt.savefig("social_evo.pdf")
 plt.close()
 
 
