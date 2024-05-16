@@ -1,0 +1,7 @@
+{ " @id ": "pass0" ,
+ " @type ": "cr: FileObject ",
+ " contentUrl ":
+ " https://object-arbutus.cloud.computecanada.ca/tgb/tgbl-wiki-v2.zip",
+ " sha256 ": "0 be3a104d6257d83296460b419f82c71 ",
+ " encodingFormat ": " application /zip"},
+}
