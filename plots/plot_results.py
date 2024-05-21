@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-sns.set_theme(style="whitegrid", font_scale=0.7)
+sns.set_theme(style="whitegrid", font_scale=1.1)
+rotation = 30
 
 plt.rcParams["font.family"] = "serif"
 label_size = 20
@@ -42,8 +43,11 @@ bar1 = sns.barplot(
 bar1.set_yscale("log")
 bar1.set_xlabel("Method",fontsize=label_size)
 bar1.set_ylabel("Test Time",fontsize=label_size)
+plt.xticks(rotation=rotation)
 plt.legend(fontsize='large', title_fontsize='large')
 plt.yticks(fontsize=y_tick_size)
+plt.tight_layout()
+
 
 
 
@@ -81,15 +85,17 @@ bar1 = sns.barplot(
             y = 'Inference Time', data=dfs, hue='Inference Time')
 bar1.set_yscale("log")
 bar1.set_xlabel("Method",fontsize=label_size)
+plt.xticks(rotation=rotation)
+plt.legend(fontsize='large', title_fontsize='large')
 bar1.set_ylabel("Test Time",fontsize=label_size)
 plt.yticks(fontsize=y_tick_size)
+plt.tight_layout()
 
 
 # for i in bar1.containers:
 #     bar1.bar_label(i,)
 
 # plt.savefig("CTDG_time.pdf")
-plt.legend(fontsize='large', title_fontsize='large')
 plt.savefig("review_time.pdf")
 plt.close()
 
