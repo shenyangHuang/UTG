@@ -6,7 +6,7 @@ import pandas as pd
 sns.set_theme(style="whitegrid", font_scale=0.7)
 
 plt.rcParams["font.family"] = "serif"
-label_size = 15
+label_size = 20
 y_tick_size = 12
 
 methods = ["TGN", "DyGFormer", "NAT", "GraphMixer", "HTGN", "GCLSTM", "EGCN", "GCN", "EdgeBank"]
@@ -59,8 +59,8 @@ r"""
 generate run time plots for CTDG
 """
 #! DyGFormer time is not reported yet, for now copies NAT time
-wiki_time = [39.24, 340.51, 340.51, 1655.44, 28.96,20.54,20.15,18.25,20.67]
-review_time = [1137.69,8925.21,8925.21,4167.63,718.17,436.30,433.23,384.51,143.49]
+wiki_time = [39.24, 7196.52, 340.51, 1655.44, 28.96,20.54,20.15,18.25,20.67]
+review_time = [1137.69,26477.51,8925.21,4167.63,718.17,436.30,433.23,384.51,143.49]
 
 wiki_time = np.asarray(wiki_time)
 review_time = np.asarray(review_time)
