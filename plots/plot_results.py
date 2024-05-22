@@ -34,25 +34,22 @@ avg_dtdg_time = np.round(avg_dtdg_time, decimals=1)
 dfs = pd.DataFrame(data={'Method': methods, 
                          'Inference Time': avg_dtdg_time,})
 
-# bar1 = sns.barplot(
-#             x = 'Method',
-#             y = 'Inference Time', data=dfs, hue="Method")
 bar1 = sns.barplot(
             x = 'Method',
-            y = 'Inference Time', data=dfs, hue='Inference Time')
+            y = 'Inference Time', data=dfs, hue="Method")
+# bar1 = sns.barplot(
+#             x = 'Method',
+#             y = 'Inference Time', data=dfs, hue='Inference Time')
 bar1.set_yscale("log")
 bar1.set_xlabel("Method",fontsize=label_size)
 bar1.set_ylabel("Test Time",fontsize=label_size)
 plt.xticks(rotation=rotation)
-plt.legend(fontsize='large', title_fontsize='large')
+# plt.legend(fontsize='large', title_fontsize='large')
 plt.yticks(fontsize=y_tick_size)
 plt.tight_layout()
 
-
-
-
-# for i in bar1.containers:
-#     bar1.bar_label(i,)
+for i in bar1.containers:
+    bar1.bar_label(i,)
 
 # plt.savefig("DTDG_time.pdf")
 plt.savefig("social_evo_time.pdf")
@@ -77,23 +74,22 @@ avg_ctdg_time = np.round(avg_ctdg_time, decimals=1)
 dfs = pd.DataFrame(data={'Method': methods, 
                          'Inference Time': avg_ctdg_time,})
 
-# bar1 = sns.barplot(
-#             x = 'Method',
-#             y = 'Inference Time', data=dfs, hue="Method")
 bar1 = sns.barplot(
             x = 'Method',
-            y = 'Inference Time', data=dfs, hue='Inference Time')
+            y = 'Inference Time', data=dfs, hue="Method")
+# bar1 = sns.barplot(
+#             x = 'Method',
+#             y = 'Inference Time', data=dfs, hue='Inference Time')
 bar1.set_yscale("log")
 bar1.set_xlabel("Method",fontsize=label_size)
 plt.xticks(rotation=rotation)
-plt.legend(fontsize='large', title_fontsize='large')
+# plt.legend(fontsize='large', title_fontsize='large')
 bar1.set_ylabel("Test Time",fontsize=label_size)
 plt.yticks(fontsize=y_tick_size)
 plt.tight_layout()
 
-
-# for i in bar1.containers:
-#     bar1.bar_label(i,)
+for i in bar1.containers:
+    bar1.bar_label(i,)
 
 # plt.savefig("CTDG_time.pdf")
 plt.savefig("review_time.pdf")
