@@ -11,6 +11,7 @@ from typing import Optional, Dict, Any, Tuple
 import math
 import math
 
+
 def set_random(random_seed):
     random.seed(random_seed)
     np.random.seed(random_seed)
@@ -30,7 +31,6 @@ def list2csv(lst: list,
     np.savetxt(fname, out_list, delimiter=delimiter,  fmt=fmt)
 
 
-
 def remove_duplicate_edges(data):
 
     src = data.src.cpu().numpy()
@@ -41,7 +41,8 @@ def remove_duplicate_edges(data):
 
     query = np.stack([src, dst, ts], axis=0)
     uniq, idx = np.unique(query, axis=1, return_index=True)
-    print ("number of edges reduced from ", query.shape[1], " to ", uniq.shape[1])
+    print("number of edges reduced from ",
+          query.shape[1], " to ", uniq.shape[1])
 
     src = torch.from_numpy(src[idx])
     dst = torch.from_numpy(dst[idx])
@@ -50,12 +51,12 @@ def remove_duplicate_edges(data):
     y = torch.from_numpy(y[idx])
 
     new_data = TemporalData(
-            src=src,
-            dst=dst,
-            t=ts,
-            msg=msg,
-            y=y,
-        )
+        src=src,
+        dst=dst,
+        t=ts,
+        msg=msg,
+        y=y,
+    )
     return new_data
 
 
@@ -78,47 +79,47 @@ def get_snapshot_batches(timestamps):
     return index_dict
 
 
-
 def generate_splits(
-        full_data: Dict[str, Any],
-        val_ratio: float = 0.15,
-        test_ratio: float = 0.15,
-    ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
-        r"""Generates train, validation, and test splits from the full dataset
-        Args:
-            full_data: dictionary containing the full dataset
-            val_ratio: ratio of validation data
-            test_ratio: ratio of test data
-        Returns:
-            train_data: dictionary containing the training dataset
-            val_data: dictionary containing the validation dataset
-            test_data: dictionary containing the test dataset
-        """
-        #! split by snapshot id instead of edge numbers
-        ts_list = np.unique(full_data["timestamps"]).tolist()
-        ts_list = sorted(ts_list)
+    full_data: Dict[str, Any],
+    val_ratio: float = 0.15,
+    test_ratio: float = 0.15,
+) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+    r"""Generates train, validation, and test splits from the full dataset
+    Args:
+        full_data: dictionary containing the full dataset
+        val_ratio: ratio of validation data
+        test_ratio: ratio of test data
+    Returns:
+        train_data: dictionary containing the training dataset
+        val_data: dictionary containing the validation dataset
+        test_data: dictionary containing the test dataset
+    """
+    #! split by snapshot id instead of edge numbers
+    ts_list = np.unique(full_data["timestamps"]).tolist()
+    ts_list = sorted(ts_list)
 
-        val_time, test_time = list(
-            np.quantile(
-                ts_list,
-                [(1 - val_ratio - test_ratio), (1 - test_ratio)],
-            )
+    val_time, test_time = list(
+        np.quantile(
+            ts_list,
+            [(1 - val_ratio - test_ratio), (1 - test_ratio)],
         )
+    )
 
-        #! changes added to ensure it works with integer correctly
-        val_time = math.ceil(val_time)
-        test_time = math.ceil(test_time)
+    #! changes added to ensure it works with integer correctly
+    val_time = math.ceil(val_time)
+    test_time = math.ceil(test_time)
 
-        timestamps = full_data["timestamps"]
+    timestamps = full_data["timestamps"]
 
-        train_mask = timestamps <= val_time
-        val_mask = np.logical_and(timestamps <= test_time, timestamps > val_time)
-        test_mask = timestamps > test_time
+    train_mask = timestamps <= val_time
+    val_mask = np.logical_and(timestamps <= test_time, timestamps > val_time)
+    test_mask = timestamps > test_time
 
-        return train_mask, val_mask, test_mask
+    return train_mask, val_mask, test_mask
 
-def convert2Torch(src, 
-                  dst, 
+
+def convert2Torch(src,
+                  dst,
                   ts):
     """
     convert numpy array to torch tensor
@@ -142,7 +143,42 @@ def convert2Torch(src,
         ts = ts.long()
     return src, dst, ts
 
+
 def mkdirs(folder):
     if not os.path.isdir(folder):
         os.makedirs(folder)
     return folder
+
+
+def convert_to_torch_extended(src, dst, ts, lbl, edge_idx):
+    """
+    convert numpy array to torch tensor
+    NOTE: extended version is required, since NAT gets labels and edge_indices as well
+
+    Parameters:
+        src, dst, ts, lbl, edge_idx: numpy array
+    """
+    # convert to Torch tensors
+    src = torch.from_numpy(src)
+    dst = torch.from_numpy(dst)
+    ts = torch.from_numpy(ts)
+    lbl = torch.from_numpy(lbl)
+    edge_idx = torch.from_numpy(edge_idx)
+
+    # type checks
+    if src.dtype != torch.int64:
+        src = src.long()
+
+    if dst.dtype != torch.int64:
+        dst = dst.long()
+
+    if ts.dtype != torch.int64:
+        ts = ts.long()
+
+    if lbl.dtype != torch.int64:
+        lbl = lbl.long()
+
+    if edge_idx.dtype != torch.int64:
+        edge_idx = edge_idx.long()
+
+    return src, dst, ts, lbl, edge_idx
