@@ -42,6 +42,9 @@ class Runner(object):
         #* for tgb dataset, we will convert the val and test set on the fly here instead of loading. 
         self.val_data = data['val_data']
         self.test_data = data['test_data']
+        
+        print("DEBUG: self.val_data['ts_map']:", self.val_data['ts_map'])
+        print("DEBUG: self.test_data['ts_map']:", self.test_data['ts_map'])
 
 
         args.num_nodes = data['train_data']['num_nodes'] + int(0.1 * data['train_data']['num_nodes']) # make it larger to fit the inductive nodes
