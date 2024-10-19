@@ -116,10 +116,7 @@ if __name__ == '__main__':
             link_pred.train()
             snapshot_list = train_data['edge_index']
             h = None 
-            total_loss = 0
             for snapshot_idx in range(train_data['time_length']):
-
-                optimizer.zero_grad()
                 # neg_edges = negative_sampling(pos_index, num_nodes=num_nodes, num_neg_samples=(pos_index.size(1)*1), force_undirected = True)
                 if (snapshot_idx == 0): #first snapshot, feed the current snapshot
                     cur_index = snapshot_list[snapshot_idx]
@@ -149,19 +146,17 @@ if __name__ == '__main__':
                         dtype=torch.long,
                         device=args.device,
                     )
-
                 pos_out = link_pred(h[pos_index[0]], h[pos_index[1]])
                 neg_out = link_pred(h[pos_index[0]], h[neg_dst])
 
-                loss = criterion(pos_out, torch.ones_like(pos_out))
-                loss += criterion(neg_out, torch.zeros_like(neg_out))
+                total_loss += criterion(pos_out, torch.ones_like(pos_out))
+                total_loss += criterion(neg_out, torch.zeros_like(neg_out))
 
-                loss.backward(retain_graph=True)
-                optimizer.step()
-
-                total_loss += float(loss)
+            total_loss.backward()
+            optimizer.step()
             num_snapshots = train_data['time_length']
-            print (f'Epoch {epoch}/{num_epochs}, Loss: {total_loss/num_snapshots}')
+
+            print (f'Epoch {epoch}/{num_epochs}, Loss: {total_loss.item()/num_snapshots}')
 
             train_time = timeit.default_timer() - train_start_time
             val_start_time = timeit.default_timer()
@@ -302,6 +297,8 @@ if __name__ == '__main__':
                 #* implementing patience
                 if ((epoch - best_epoch) >= args.patience and epoch > 1):
                     best_epoch = epoch
+                    print ("------------------------------------------")
+                    print ("------------------------------------------")
                     print ("run finishes")
                     print ("best epoch is, ", best_epoch)
                     print ("best val performance is, ", best_val)
@@ -309,6 +306,8 @@ if __name__ == '__main__':
                     print ("------------------------------------------")
                     break
                 best_epoch = epoch
+        print ("------------------------------------------")
+        print ("------------------------------------------")
         print ("run finishes")
         print ("best epoch is, ", best_epoch)
         print ("best val performance is, ", best_val)

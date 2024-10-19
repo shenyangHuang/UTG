@@ -315,17 +315,23 @@ if __name__ == '__main__':
                 #* implementing patience
                 if ((epoch - best_epoch) >= args.patience and epoch > 1):
                     best_epoch = epoch
+                    print ("------------------------------------------")
+                    print ("------------------------------------------")
                     print ("run finishes")
                     print ("best epoch is, ", best_epoch)
                     print ("best val performance is, ", best_val)
                     print ("best test performance is, ", best_test)
                     print ("------------------------------------------")
+                    print ("------------------------------------------")
                     break
                 best_epoch = epoch
+        print ("------------------------------------------")
+        print ("------------------------------------------")
         print ("run finishes")
         print ("best epoch is, ", best_epoch)
         print ("best val performance is, ", best_val)
         print ("best test performance is, ", best_test)
+        print ("------------------------------------------")
         print ("------------------------------------------")
 
 
