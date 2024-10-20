@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=long #unkillable #main #long
-#SBATCH --output=gclstm_mooc_full.txt 
-#SBATCH --error=gclstm_mooc_full_error.txt 
+#SBATCH --output=htgn_wiki_4daily.txt 
+#SBATCH --error=htgn_wiki_4daily_error.txt 
 #SBATCH --cpus-per-task=4                     # Ask for 4 CPUs
 #SBATCH --gres=gpu:1                  # Ask for 1 titan xp gpu:rtx8000:1 
 #SBATCH --mem=32G #64G                             # Ask for 32 GB of RAM
@@ -86,11 +86,11 @@ pwd
 
 # CUDA_VISIBLE_DEVICES=0 python -u dtdg_main_htgn.py --model=HTGN --dataset contacts -t hourly --lr 2e-4 --max_epoch 500 --num_runs 5 --patience 100
 
-# CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
+CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --dataset=tgbl-wiki -t 4daily --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
 
 # CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --dataset=tgbl-review -t monthly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
 
-# CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --dataset=tgbl-coin -t hourly --lr 0.001 --max_epoch 200 --num_runs 5 --patience 50
+# CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --dataset=tgbl-coin -t hourly --lr 0.001 --max_epoch 50 --num_runs 5 --patience 5
 
 
 
