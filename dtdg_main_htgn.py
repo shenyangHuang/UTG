@@ -293,6 +293,9 @@ if __name__ == '__main__':
 
     assert (args.window_size >= 1), "backprop window size must be greater than or equal to 1"
 
+    print ("running with truncated backprop of window size", args.window_size)
+    print ("--------------------------------")
+
     for seed in range(args.seed, args.seed + args.num_runs):
         print ("--------------------------------")
         print ("excuting run with seed ", seed)
