@@ -185,8 +185,8 @@ class Runner(object):
 
         for epoch in range(1, args.max_epoch + 1):
             epoch_start_time = timeit.default_timer()
-            
-            epoch_losses = []
+            optimizer.zero_grad()
+            total_loss = 0
             self.model.init_hiddens()
             # ==========================
             # Train
@@ -195,10 +195,11 @@ class Runner(object):
             self.model.train()
             z = None
             snapshot_list = self.train_data['edge_index']
+            cumulate_loss = 0
+
             for snapshot_idx in range(self.train_data['time_length']):
                 pos_index = snapshot_list[snapshot_idx]
                 pos_index = pos_index.long().to(args.device)
-                optimizer.zero_grad()
 
                 #* generate random samples for training
                 neg_index = generate_random_negatives(pos_index, num_nodes=args.num_nodes, num_neg_samples=1)
@@ -206,21 +207,26 @@ class Runner(object):
                     z = self.model(pos_index, self.x)
                                
                 if args.use_htc == 0:
-                    epoch_loss = self.loss(z, pos_edge_index=pos_index,  neg_edge_index=neg_index)
+                    cur_loss = self.loss(z, pos_edge_index=pos_index,  neg_edge_index=neg_index)
                 else:
-                    epoch_loss = self.loss(z, pos_edge_index=pos_index, neg_edge_index=neg_index) + self.model.htc(z)
+                    cur_loss = self.loss(z, pos_edge_index=pos_index, neg_edge_index=neg_index) + self.model.htc(z)
                 
-                epoch_loss.backward()
-                optimizer.step()
-                epoch_losses.append(epoch_loss.item())
+                total_loss += cur_loss.item()
+                cumulate_loss += cur_loss
 
+                if ((snapshot_idx % args.window_size) == 0):
+                    cumulate_loss.backward()
+                    optimizer.step()
+                    cumulate_loss = 0
+                    optimizer.zero_grad()
+                
                 #* update the embedding after the prediction
                 pos_index = snapshot_list[snapshot_idx]
                 pos_index = pos_index.long().to(args.device)
                 z = self.model(pos_index, self.x)
                 z = self.model.update_hiddens_all_with(z) 
             
-            average_epoch_loss = np.mean(epoch_losses)
+            average_epoch_loss = total_loss / self.train_data['time_length']
             #? terminate if the loss is nan
             if math.isnan(average_epoch_loss):
                 print('nan loss')
@@ -314,7 +320,12 @@ if __name__ == '__main__':
     set_random(args.seed)
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
     init_logger(prepare_dir(args.output_folder) + args.dataset + '_timeScale_' + str(args.time_scale) + '_seed_' + str(args.seed) + '.log')
+
     
+    assert (args.window_size >= 1), "backprop window size must be greater than or equal to 1"
+    print ("running with truncated backprop of window size", args.window_size)
+    print ("--------------------------------")
+
     for seed in range(args.seed, args.seed + args.num_runs):
         runner = Runner()
         print ("--------------------------------")

@@ -153,7 +153,7 @@ class Runner(object):
 
         for epoch in range(1, args.max_epoch + 1):
             epoch_start_time = timeit.default_timer()
-            
+            optimizer.zero_grad()
             total_loss = 0
             self.model.init_hiddens()
             # ==========================
@@ -176,7 +176,6 @@ class Runner(object):
             for snapshot_idx in range(self.train_data['time_length']):
                 pos_index = snapshot_list[snapshot_idx]
                 pos_index = pos_index.long().to(args.device)
-                optimizer.zero_grad()
 
                 #* generate random samples for training
                 neg_index = generate_random_negatives(pos_index, num_nodes=args.num_nodes, num_neg_samples=1)
@@ -198,6 +197,7 @@ class Runner(object):
                     cumulate_loss.backward()
                     optimizer.step()
                     cumulate_loss = 0
+                    optimizer.zero_grad()
                     
 
 
@@ -292,7 +292,6 @@ if __name__ == '__main__':
     init_logger(prepare_dir(args.output_folder) + args.dataset + '_timeScale_' + str(args.time_scale) + '_seed_' + str(args.seed) + '.log')
 
     assert (args.window_size >= 1), "backprop window size must be greater than or equal to 1"
-
     print ("running with truncated backprop of window size", args.window_size)
     print ("--------------------------------")
 
