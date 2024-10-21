@@ -110,8 +110,6 @@ python dtdg_edgebank.py -d enron -t monthly --mem_mode fixed_time_window
 
 4. GCLSTM Commands
 ```
-python dtdg_gclstm.py --dataset=canparl -t biyearly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
-
 python dtdg_gclstm.py --dataset=enron -t monthly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
 
 python dtdg_gclstm.py --dataset=uci -t weekly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
@@ -122,13 +120,49 @@ python dtdg_gclstm.py --dataset social_evo -t daily --lr 0.001 --max_epoch 500 -
 
 python dtdg_gclstm.py --dataset contacts -t hourly --lr 0.001 --max_epoch 200 --num_runs 5 --patience 50
 
+python dtdg_gclstm.py --dataset=canparl -t biyearly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
 ```
 
-5. UTG with basic GNN encoder and MLP decoder
+EGCNO Commands
+```
+python dtdg_egcno.py --dataset=enron -t monthly --lr 2e-4 --max_epoch 500 --num_runs 5 --patience 100
+
+python dtdg_egcno.py --dataset=uci -t weekly --lr 2e-4 --max_epoch 500 --num_runs 5 --patience 100
+
+python dtdg_egcno.py --dataset mooc -t daily --lr 2e-4 --max_epoch 500 --num_runs 5 --patience 100
+
+python dtdg_egcno.py --dataset social_evo -t daily --lr 2e-4 --max_epoch 500 --num_runs 5 --patience 100
+
+python dtdg_egcno.py --dataset contacts -t hourly --lr 2e-4 --max_epoch 200 --num_runs 5 --patience 50
+
+python dtdg_egcno.py --dataset=canparl -t biyearly --lr 2e-4 --max_epoch 500 --num_runs 5 --patience 100
+```
+
+
+
+5. basic GCN encoder and MLP decoder with test update
 
 ```
-python utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 0.001
+python dtdg_utg_gcn.py --dataset=enron -t monthly --lr 2e-4 --max_epoch 500 --num_runs 5 --patience 100
+
+
+python ctdg_utg_gcn.py --dataset=tgbl-wiki -t hourly --lr 2e-4 --max_epoch 500 --seed 1 --num_runs 5 --patience 50 --batch_size 200
+
+python ctdg_utg_gcn.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20 --batch_size 1000
+
 ```
+
+6. CTDG commands for dt datasets
+```
+python ctdg_egcno.py --dataset=tgbl-wiki -t hourly --lr 2e-4 --max_epoch 500 --seed 1 --num_runs 5 --patience 50 --batch_size 200
+
+python ctdg_egcno.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20 --batch_size 200
+
+python ctdg_gslstm.py --dataset=tgbl-wiki -t hourly --lr 2e-4 --max_epoch 500 --seed 1 --num_runs 5 --patience 50 --batch_size 200
+
+python ctdg_gclstm.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20 --batch_size 200
+```
+
 
 
 

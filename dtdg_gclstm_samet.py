@@ -143,8 +143,8 @@ if __name__ == '__main__':
                     else:
                         raise NotImplementedError("Edge attributes are not yet supported")
                     h, h_0, c_0 = model(node_feat, cur_index, edge_attr, h_0, c_0)
-                else: #subsequent snapshot, feed the previous snapshot
-                    prev_index = snapshot_list[snapshot_idx-1]
+                else: #feed the same snapshot
+                    prev_index = snapshot_list[snapshot_idx]
                     prev_index = prev_index.long().to(args.device)
                     if ('edge_attr' not in train_data):
                         edge_attr = torch.ones(prev_index.size(1), edge_feat_dim).to(args.device)

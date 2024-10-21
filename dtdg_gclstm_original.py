@@ -130,28 +130,20 @@ if __name__ == '__main__':
             snapshot_list = train_data['edge_index']
             h_0, c_0, h = None, None, None
             total_loss = 0
+
+            optimizer.zero_grad()
+            loss = 0
+
+
             for snapshot_idx in range(train_data['time_length']):
-
-                optimizer.zero_grad()
-                # neg_edges = negative_sampling(pos_index, num_nodes=num_nodes, num_neg_samples=(pos_index.size(1)*1), force_undirected = True)
-                if (snapshot_idx == 0): #first snapshot, feed the current snapshot
-                    cur_index = snapshot_list[snapshot_idx]
-                    cur_index = cur_index.long().to(args.device)
-                    # TODO, also need to support edge attributes correctly in TGX
-                    if ('edge_attr' not in train_data):
-                        edge_attr = torch.ones(cur_index.size(1), edge_feat_dim).to(args.device)
-                    else:
-                        raise NotImplementedError("Edge attributes are not yet supported")
-                    h, h_0, c_0 = model(node_feat, cur_index, edge_attr, h_0, c_0)
-                else: #subsequent snapshot, feed the previous snapshot
-                    prev_index = snapshot_list[snapshot_idx-1]
-                    prev_index = prev_index.long().to(args.device)
-                    if ('edge_attr' not in train_data):
-                        edge_attr = torch.ones(prev_index.size(1), edge_feat_dim).to(args.device)
-                    else:
-                        raise NotImplementedError("Edge attributes are not yet supported")
-                    h, h_0, c_0 = model(node_feat, prev_index, edge_attr, h_0, c_0)
-
+                cur_index = snapshot_list[snapshot_idx]
+                cur_index = cur_index.long().to(args.device)
+                # TODO, also need to support edge attributes correctly in TGX
+                if ('edge_attr' not in train_data):
+                    edge_attr = torch.ones(cur_index.size(1), edge_feat_dim).to(args.device)
+                else:
+                    raise NotImplementedError("Edge attributes are not yet supported")
+                h, h_0, c_0 = model(node_feat, cur_index, edge_attr, h_0, c_0)
                 pos_index = snapshot_list[snapshot_idx]
                 pos_index = pos_index.long().to(args.device)
 
@@ -164,25 +156,15 @@ if __name__ == '__main__':
                     )
 
                 pos_out = link_pred(h[pos_index[0]], h[pos_index[1]])
-                # pos_loss = -torch.log(pos_out + 1e-15).mean()
-
-
                 neg_out = link_pred(h[pos_index[0]], h[neg_dst])
-                # neg_loss = -torch.log(1 - neg_out + 1e-15).mean()
-                #loss = pos_loss + neg_loss
 
-                loss = criterion(pos_out, torch.ones_like(pos_out))
+                loss += criterion(pos_out, torch.ones_like(pos_out))
                 loss += criterion(neg_out, torch.zeros_like(neg_out))
-
-                loss.backward()
-                optimizer.step()
 
                 total_loss += (float(loss) / pos_index.shape[1])
 
-
-                h_0 = h_0.detach()
-                c_0 = c_0.detach()
-
+            loss.backward()
+            optimizer.step()
             print (f'Epoch {epoch}/{num_epochs}, Loss: {total_loss}')
 
             train_time = timeit.default_timer() - train_start_time
@@ -333,17 +315,23 @@ if __name__ == '__main__':
                 #* implementing patience
                 if ((epoch - best_epoch) >= args.patience and epoch > 1):
                     best_epoch = epoch
+                    print ("------------------------------------------")
+                    print ("------------------------------------------")
                     print ("run finishes")
                     print ("best epoch is, ", best_epoch)
                     print ("best val performance is, ", best_val)
                     print ("best test performance is, ", best_test)
                     print ("------------------------------------------")
+                    print ("------------------------------------------")
                     break
                 best_epoch = epoch
+        print ("------------------------------------------")
+        print ("------------------------------------------")
         print ("run finishes")
         print ("best epoch is, ", best_epoch)
         print ("best val performance is, ", best_val)
         print ("best test performance is, ", best_test)
+        print ("------------------------------------------")
         print ("------------------------------------------")
 
 

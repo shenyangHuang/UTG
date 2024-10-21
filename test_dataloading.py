@@ -99,7 +99,6 @@ def test_dtdg_loading():
     assert train_ts[0] == train_snapshot_ids[0], "First train snapshot ID is the same as the first timestamp"
     assert train_ts[-1] == train_snapshot_ids[-1], "Last train snapshot ID is the same as the last timestamp"
     
-    print (val_ts[-1], val_snapshot_ids[-1])
     assert val_ts[0] == val_snapshot_ids[0], "First val snapshot ID is the same as the first timestamp"
     assert val_ts[-1] == val_snapshot_ids[-1], "last val snapshot ID is the same as the last timestamp"
 
@@ -120,18 +119,118 @@ def test_dtdg_loading():
 
 
 
-# def test_ctdg_loading():
-#     r"""
-#     1. load directly from TGB, check # of edges
-#     2. load TGB from TGX, check # of edges
-#     3. discretize TGB dataset edges, check # of edges
-#     """
-#     print ("hi")
+def test_ctdg_loading():
+    r"""
+    want to test if the update for each snapshot is inserted at the right time
+    """
+    DATA = "tgbl-wiki" #"tgbl-review" 
+    time_scale = "hourly" #"monthly" 
+
+
+    from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
+    #* TGB dataloading
+    dataset = PyGLinkPropPredDataset(name=DATA, root="datasets")
+    full_data = dataset.get_TemporalData()
+
+    #get masks
+    train_mask = dataset.train_mask
+    val_mask = dataset.val_mask
+    test_mask = dataset.test_mask
+
+    train_data = full_data[train_mask]
+    val_data = full_data[val_mask]
+    test_data = full_data[test_mask]
+
+    from torch_geometric.loader import TemporalDataLoader
+    batch_size = 1 #200
+    train_loader = TemporalDataLoader(train_data, batch_size=batch_size)
+    val_loader = TemporalDataLoader(val_data, batch_size=batch_size)
+    test_loader = TemporalDataLoader(test_data, batch_size=batch_size)
+
+
+    from utils.data_util import loader
+    data = loader(dataset=DATA, time_scale=time_scale)
+    train_snapshots = data['train_data']['edge_index']
+    train_ts = data['train_data']['ts_map']
+    val_snapshots = data['val_data']['edge_index']
+    val_ts = data['val_data']['ts_map']
+    test_snapshots = data['test_data']['edge_index']
+    test_ts = data['test_data']['ts_map']
+
+    assert len(train_snapshots) == len(train_ts), "Train snapshots and timestamps are the same length"
+    assert len(val_snapshots) == len(val_ts), "Val snapshots and timestamps are the same length"
+    assert len(test_snapshots) == len(test_ts), "Test snapshots and timestamps are the same length"
+
+
+    all_snapshot_ts = list(train_ts.values()) + list(val_ts.values()) + list(test_ts.values())
+    assert all_snapshot_ts == sorted(all_snapshot_ts), "All snapshot timestamps are sorted in ascending order"
+
+    all_seen_ts = []
+    assert next(iter(train_ts)) < next(iter(val_ts)) < next(iter(test_ts)), "Train, Val, Test timestamps are in the correct order"
+
+    max_train_ts_idx = max(list(train_ts.keys()))
+    ts_idx = min(list(train_ts.keys()))
+    for batch in train_loader:
+        pos_src, pos_dst, pos_t, pos_msg = (
+        batch.src,
+        batch.dst,
+        batch.t,
+        batch.msg,
+        )
+
+        #! update the model now if the prediction batch has moved to next snapshot
+        #! need to consider possibility of multiple update
+        while (pos_t[0] > train_ts[ts_idx] and ts_idx < max_train_ts_idx):
+            all_seen_ts.append(train_ts[ts_idx])
+            ts_idx += 1
+    #? the final snapshot won't be seen in this way
+    #? need to add the last snapshot manually
+    all_seen_ts.append(train_ts[ts_idx])
+
+
+    max_val_ts_idx = max(list(val_ts.keys()))
+    ts_idx = min(list(val_ts.keys()))
+    #! we want to update the snapshot only once when it has first arrived
+    for batch in val_loader:
+        pos_src, pos_dst, pos_t, pos_msg = (
+        batch.src,
+        batch.dst,
+        batch.t,
+        batch.msg,
+        )
+
+        #! update the model now if the prediction batch has moved to next snapshot
+        while (pos_t[0] > val_ts[ts_idx] and ts_idx < max_val_ts_idx):
+            all_seen_ts.append(val_ts[ts_idx])
+            ts_idx += 1
+    #* need to update with last snapshot
+    all_seen_ts.append(val_ts[ts_idx])
+    
+    max_test_ts_idx = max(list(test_ts.keys()))
+    ts_idx = min(list(test_ts.keys()))
+    for batch in test_loader:
+        pos_src, pos_dst, pos_t, pos_msg = (
+        batch.src,
+        batch.dst,
+        batch.t,
+        batch.msg,
+        )
+
+        #! update the model now if the prediction batch has moved to next snapshot
+        while (pos_t[0] > test_ts[ts_idx] and ts_idx < max_test_ts_idx):
+            all_seen_ts.append(test_ts[ts_idx])
+            ts_idx += 1
+    #* need to update with last snapshot
+    all_seen_ts.append(test_ts[ts_idx])
+
+    assert all_seen_ts == sorted(all_seen_ts), "All updated snapshots are sorted in ascending order"
+    assert all_seen_ts == all_snapshot_ts, "All snapshot timestamps are seen"
 
 
 
 if __name__ == '__main__':
-    test_dtdg_loading()
+    # test_dtdg_loading()
+    test_ctdg_loading()
 
 
 

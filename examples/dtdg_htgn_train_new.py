@@ -29,7 +29,20 @@ def generate_random_negatives(pos_edges: torch.Tensor,
     Return:
         neg_edges: negative edges
     """
-    neg_edges = negative_sampling(pos_edges, num_nodes=num_nodes, num_neg_samples=(pos_edges.size(1)*num_neg_samples))
+    # #! use PyG sampling
+    # neg_edges = negative_sampling(pos_edges, num_nodes=num_nodes, num_neg_samples=(pos_edges.size(1)*num_neg_samples))
+
+    #! use same source sampling
+    # Sample negative destination nodes.
+    neg_edges = torch.randint(
+        0,
+        num_nodes-1,
+        (pos_edges.size(0),),
+        dtype=torch.long,
+        device=pos_edges.device,
+    )
+
+
     return neg_edges
 
 
@@ -100,12 +113,11 @@ class Runner(object):
         test_snapshots = test_data['edge_index'] #converted to undirected, also removes self loops as required by HTGN
         test_edges = test_data['original_edges'] #original edges unmodified
         ts_min = min(test_snapshots.keys())
-
         perf_list = {}
         perf_idx = 0
 
         for snapshot_idx in test_snapshots.keys():
-            pos_index = torch.from_numpy(test_edges[snapshot_idx])
+            pos_index = torch.from_numpy(test_edges[snapshot_idx])  #shape(2,-1)
             pos_index = pos_index.long().to(args.device)
 
             for i in range(pos_index.shape[1]):
@@ -277,15 +289,12 @@ if __name__ == '__main__':
     from utils.data_util import loader, prepare_dir
 
     set_random(args.seed)
-    args.use_hyperdecoder = False
-    args.use_htc = 0
-
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
     init_logger(prepare_dir(args.output_folder) + args.dataset + '_timeScale_' + str(args.time_scale) + '_seed_' + str(args.seed) + '.log')
 
-    runner = Runner()
     for seed in range(args.seed, args.seed + args.num_runs):
         print ("--------------------------------")
         print ("excuting run with seed ", seed)
+        runner = Runner()
         runner.run(seed=seed)
         print ("--------------------------------")

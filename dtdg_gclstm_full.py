@@ -119,6 +119,7 @@ if __name__ == '__main__':
         best_val = 0
         best_test = 0
         best_epoch = 0
+        loss = 0
 
         for epoch in range(num_epochs):
             print ("------------------------------------------")
@@ -130,10 +131,8 @@ if __name__ == '__main__':
             snapshot_list = train_data['edge_index']
             h_0, c_0, h = None, None, None
             total_loss = 0
+            optimizer.zero_grad()
             for snapshot_idx in range(train_data['time_length']):
-
-                optimizer.zero_grad()
-                # neg_edges = negative_sampling(pos_index, num_nodes=num_nodes, num_neg_samples=(pos_index.size(1)*1), force_undirected = True)
                 if (snapshot_idx == 0): #first snapshot, feed the current snapshot
                     cur_index = snapshot_list[snapshot_idx]
                     cur_index = cur_index.long().to(args.device)
@@ -164,24 +163,19 @@ if __name__ == '__main__':
                     )
 
                 pos_out = link_pred(h[pos_index[0]], h[pos_index[1]])
-                # pos_loss = -torch.log(pos_out + 1e-15).mean()
-
-
                 neg_out = link_pred(h[pos_index[0]], h[neg_dst])
-                # neg_loss = -torch.log(1 - neg_out + 1e-15).mean()
-                #loss = pos_loss + neg_loss
 
-                loss = criterion(pos_out, torch.ones_like(pos_out))
+                loss += criterion(pos_out, torch.ones_like(pos_out))
                 loss += criterion(neg_out, torch.zeros_like(neg_out))
-
-                loss.backward()
-                optimizer.step()
 
                 total_loss += (float(loss) / pos_index.shape[1])
 
 
                 h_0 = h_0.detach()
                 c_0 = c_0.detach()
+                
+            loss.backward()
+            optimizer.step()
 
             print (f'Epoch {epoch}/{num_epochs}, Loss: {total_loss}')
 
