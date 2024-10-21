@@ -154,7 +154,7 @@ class Runner(object):
         for epoch in range(1, args.max_epoch + 1):
             epoch_start_time = timeit.default_timer()
             
-            epoch_losses = []
+            total_loss = 0
             self.model.init_hiddens()
             # ==========================
             # Train
@@ -165,11 +165,13 @@ class Runner(object):
             snapshot_list = self.train_data['edge_index']
             """
             #! significant modification to the training procedure in order to receive test time updates
+            #! now also support variable window size for truncated backprop through time
             1. feed the true edges from (t-1) into the model and update the embeddings
             2. use the updated embeddings to predict the edges in t
             exception is for the first snapshot
             GNN generates embeddings based on true edges not negative samples
             """
+            cumulate_loss = 0
 
             for snapshot_idx in range(self.train_data['time_length']):
                 pos_index = snapshot_list[snapshot_idx]
@@ -184,21 +186,31 @@ class Runner(object):
                                
 
                 if args.use_htc == 0:
-                    epoch_loss = self.loss(z, pos_edge_index=pos_index,  neg_edge_index=neg_index)
+                    cur_loss = self.loss(z, pos_edge_index=pos_index,  neg_edge_index=neg_index)
                 else:
-                    epoch_loss = self.loss(z, pos_edge_index=pos_index, neg_edge_index=neg_index) + self.model.htc(z)
+                    cur_loss = self.loss(z, pos_edge_index=pos_index, neg_edge_index=neg_index) + self.model.htc(z)
                 
-                epoch_loss.backward()
-                optimizer.step()
-                epoch_losses.append(epoch_loss.item())
+                
+                total_loss += cur_loss.item()
+                cumulate_loss += cur_loss
+
+                if ((snapshot_idx % args.window_size) == 0):
+                    cumulate_loss.backward()
+                    optimizer.step()
+                    cumulate_loss = 0
+                    
+
 
                 #* update the embedding after the prediction of current snapshot
-                pos_index = snapshot_list[snapshot_idx]
-                pos_index = pos_index.long().to(args.device)
-                z = self.model(pos_index, self.x)
+                prev_index = snapshot_list[snapshot_idx]
+                prev_index = prev_index.long().to(args.device)
+                z = self.model(prev_index, self.x)
                 self.model.update_hiddens_all_with(z)
-            
-            average_epoch_loss = np.mean(epoch_losses)
+
+
+                
+                
+            average_epoch_loss = total_loss / self.train_data['time_length']
             train_end_time = timeit.default_timer()
 
             z = z.detach()
@@ -278,6 +290,8 @@ if __name__ == '__main__':
     set_random(args.seed)
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
     init_logger(prepare_dir(args.output_folder) + args.dataset + '_timeScale_' + str(args.time_scale) + '_seed_' + str(args.seed) + '.log')
+
+    assert (args.window_size >= 1), "backprop window size must be greater than or equal to 1"
 
     for seed in range(args.seed, args.seed + args.num_runs):
         print ("--------------------------------")

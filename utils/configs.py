@@ -10,6 +10,7 @@ parser.add_argument('--data_pt_path', type=str, default='', help='need to be mod
 parser.add_argument('--num_nodes', type=int, default=-1, help='num of nodes')
 parser.add_argument('--nfeat', type=int, default=128, help='dim of input feature')
 parser.add_argument('-t', '--time_scale', type=str, default='hourly', help='Time scale to discretize a TGB dataset.') #choices=['minutely', 'hourly', 'daily', 'weekly', 'monthly', 'yearly', 'biyearly']
+parser.add_argument('--window_size', type=int, default=1, help='window size used for UTG training')
 parser.add_argument("--wandb", action="store_true", default=False, help="now using wandb")
 parser.add_argument('--num_runs', type=int, default=1, help='number of runs')
 parser.add_argument('--batch_size', type=int, help='Batch size, for CTDGs only', default=200)
