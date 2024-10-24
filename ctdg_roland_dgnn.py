@@ -1,3 +1,8 @@
+"""
+python -u ctdg_roland_dgnn.py --model="roland_dgnn" --dataset="tgbl-wiki" -t "hourly" --lr "1e-3" --max_epoch "50" --num_runs "1" --patience "10" --seed "1"
+lr to try: 2e-4, 1e-3, 1e-4
+"""
+
 import torch
 import numpy as np
 from tgb.linkproppred.evaluate import Evaluator
@@ -49,8 +54,7 @@ def test_tgb(test_loader, test_snapshots, ts_list, node_feat,
 
         # these are the previous snapshot parameters, update before a new prediction
         # computer new number of edges
-        num_current_edges = len(pos_src)
-        num_previous_edges = num_previous_edges + num_current_edges
+        num_previous_edges = len(pos_src)
         # update last-embeddings for the next round
         last_embeddings = current_embeddings
         
@@ -59,10 +63,8 @@ def test_tgb(test_loader, test_snapshots, ts_list, node_feat,
             with torch.no_grad():
                 cur_index = test_snapshots[ts_idx]
                 cur_index = cur_index.long().to(args.device)
-                # edge_attr = torch.ones(cur_index.size(1), edge_feat_dim).to(args.device)  # TODO: it is not used currently!
-
                 current_embeddings = encoder(node_feat, cur_index, \
-                        last_embeddings, num_current_edges, num_previous_edges)
+                        last_embeddings, None, num_previous_edges)
     
             ts_idx += 1
 
@@ -70,8 +72,6 @@ def test_tgb(test_loader, test_snapshots, ts_list, node_feat,
     with torch.no_grad():
         cur_index = test_snapshots[max_ts_idx]
         cur_index = cur_index.long().to(args.device)
-        # edge_attr = torch.ones(cur_index.size(1), edge_feat_dim).to(args.device)  # TODO: it is not used currently!
-        
         num_current_edges = cur_index.shape[1]
         current_embeddings = encoder(node_feat, cur_index, \
                         last_embeddings, num_current_edges, num_previous_edges)
@@ -99,13 +99,13 @@ if __name__ == '__main__':
     num_epochs = args.max_epoch
     lr = args.lr
     # ROLAND-DGNN related parameters
-    weight_decay = 5e-3
-    node_feat_dim = 256 
-    dec_hid_dim = 128
+    embed_size = 256
+    node_feat_dim = embed_size
+    dec_hid_dim = embed_size
     output_dim = 1
     link_pred_num_layers = 2
     edge_feat_dim = 1
-    update_strategy = "gru"
+    update_strategy = "gru" #"mlp" #"gru"
 
     # CTDG dataset
     dataset = PyGLinkPropPredDataset(name=args.dataset, root="datasets")
@@ -125,18 +125,6 @@ if __name__ == '__main__':
     evaluator = Evaluator(name=args.dataset)
     min_dst_idx, max_dst_idx = int(full_data.dst.min()), int(full_data.dst.max())
 
-    # set up node features: TODO: there is no node features for any dataset
-    node_feat = dataset.node_feat
-    if (node_feat is not None):
-        print(f"DEBUG: node_feat is not None!")
-        node_feat = node_feat.to(args.device)
-        node_feat_dim = node_feat.size(1)
-    else:
-        print(f"DEBUG: node_feat is None!")
-        # node_feat_dim = node_feat_dim
-        # node_feat = torch.randn((full_data.num_nodes,node_feat_dim)).to(args.device)
-        node_feat_dim = 0
-
     #* load the discretized version
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
     train_data = data['train_data']
@@ -144,6 +132,16 @@ if __name__ == '__main__':
     test_data = data['test_data']
     num_nodes = data['train_data']['num_nodes'] + 1
     print(f"INFO: Number of nodes: {num_nodes}")
+
+    # set up node features: TODO: there is no node features for any dataset
+    node_feat = dataset.node_feat
+    if (node_feat is not None):
+        print(f"DEBUG: node_feat is not None!")
+        node_feat = node_feat.to(args.device)
+        node_feat_dim = node_feat.size(1)
+    else:
+        node_feat = torch.randn((num_nodes,node_feat_dim)).to(args.device)
+
     
 
     for seed in range(args.seed, args.seed + args.num_runs):
@@ -153,23 +151,21 @@ if __name__ == '__main__':
         # initialization of the model to prep for training
         model_dim = {
             "input_dim": node_feat_dim,
-            "preproc_hid_1": 256,  # from DGNN original implementation; TODO
-            "preproc_hid_2": 128,  # from DGNN original implementation; TODO
-            "hidden_conv_1": 128,  # 64: from DGNN original implementation; TODO
+            "preproc_hid_1": dec_hid_dim,  # from DGNN original implementation; TODO
+            "preproc_hid_2": dec_hid_dim,  # from DGNN original implementation; TODO
+            "hidden_conv_1": dec_hid_dim,  # 64: from DGNN original implementation; TODO
             "hidden_conv_2": dec_hid_dim,  # 32: from DGNN original implementation
         }
 
         # define model
         encoder = ROLANDGNN(model_dim, num_nodes, args.dropout, update=update_strategy).to(args.device)
         decoder = LinkPredictor(dec_hid_dim, dec_hid_dim, output_dim, link_pred_num_layers, args.dropout).to(args.device)
-
-        # define the optimizer
         optimizer = torch.optim.Adam(
             set(encoder.parameters()) | set(decoder.parameters()), 
-            lr=lr, weight_decay=weight_decay)
+            lr=lr)
         
         # criterion
-        criterion = torch.nn.BCEWithLogitsLoss()
+        criterion = torch.nn.MSELoss()
 
         best_val = 0
         best_test = 0
@@ -186,37 +182,23 @@ if __name__ == '__main__':
             snapshot_list = train_data['edge_index']
             total_loss = 0
             for snapshot_idx in range(train_data['time_length']):
-
-                optimizer.zero_grad()
                 if (snapshot_idx == 0): #first snapshot, feed the current snapshot
                     cur_index = snapshot_list[snapshot_idx]
                     cur_index = cur_index.long().to(args.device)
                     
-                    num_previous_edges = 0
-                    last_embeddings = [torch.Tensor([[0 for i in range(model_dim["hidden_conv_1"])] for j in range(num_nodes)]).to(args.device), \
-                                       torch.Tensor([[0 for i in range(model_dim["hidden_conv_2"])] for j in range(num_nodes)]).to(args.device)]
-                    
-                    edge_index = cur_index
+                    num_previous_edges = None
+                    current_embeddings = encoder(node_feat, cur_index)
 
                 else: #subsequent snapshot, feed the previous snapshot
                     prev_index = snapshot_list[snapshot_idx-1]
                     prev_index = prev_index.long().to(args.device)
-
-                    edge_index = prev_index
-
-                # node features
-                node_feat = torch.Tensor([[1] for _ in range(num_nodes)]).to(args.device)
-
-                # pass through encoder
-                num_current_edges = edge_index.shape[1]
-                current_embeddings = encoder(node_feat, edge_index, \
-                        last_embeddings, num_current_edges, num_previous_edges)
+                    current_embeddings = encoder(node_feat, prev_index, \
+                        last_embeddings, None, num_previous_edges)
 
                 # computer new number of edges
-                num_previous_edges = num_previous_edges + num_current_edges
+                num_previous_edges = num_previous_edges
                 # update last-embeddings for the next round
                 last_embeddings = current_embeddings
-
                 pos_index = snapshot_list[snapshot_idx]
                 pos_index = pos_index.long().to(args.device)
 
@@ -227,17 +209,17 @@ if __name__ == '__main__':
                         dtype=torch.long,
                         device=args.device,
                     )
-
-                pos_pred = decoder(current_embeddings[1][pos_index[0]], current_embeddings[1][pos_index[1]])
-                neg_pred = decoder(current_embeddings[1][pos_index[0]], current_embeddings[1][neg_dst])
+                
+                pos_pred = decoder(last_embeddings[1][pos_index[0]], last_embeddings[1][pos_index[1]])
+                neg_pred = decoder(last_embeddings[1][pos_index[0]], last_embeddings[1][neg_dst])
 
                 loss = criterion(pos_pred, torch.ones_like(pos_pred))
                 loss += criterion(neg_pred, torch.zeros_like(neg_pred))
 
                 loss.backward()
                 optimizer.step()
-
-                total_loss += float(loss) / pos_index.shape[1]
+                optimizer.zero_grad()
+                total_loss += loss.item() / pos_index.shape[1]
 
             train_time = timeit.default_timer() - train_start_time
             print (f'INFO: Epoch {epoch}/{num_epochs}, Loss: {total_loss}')

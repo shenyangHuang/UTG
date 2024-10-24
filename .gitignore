@@ -10,6 +10,7 @@ __pycache__/
 *.json
 *.pkl
 *.txt
+*.pdf
 # C extensions
 *.so
 wandb/

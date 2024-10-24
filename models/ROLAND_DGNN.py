@@ -35,19 +35,11 @@ class ROLANDGNN(torch.nn.Module):
         
         super(ROLANDGNN, self).__init__()
         #Architecture: 
-            #2 MLP layers to preprocess BERT repr, 
             #2 GCN layer to aggregate node embeddings
             # node embeddings are passed as outputs
         
-        #You can change the layer dimensions but 
-        #if you change the architecture you need to change the forward method too
-        #TODO: make the architecture parameterizable
-        
-        self.preprocess1 = Linear(model_dim["input_dim"], model_dim["preproc_hid_1"])  
-        self.preprocess2 = Linear(model_dim["preproc_hid_1"], model_dim["preproc_hid_2"])  
-        self.conv1 = GCNConv(model_dim["preproc_hid_2"], model_dim["hidden_conv_1"])
+        self.conv1 = GCNConv(model_dim["input_dim"], model_dim["hidden_conv_1"])
         self.conv2 = GCNConv(model_dim["hidden_conv_1"], model_dim["hidden_conv_2"])  
-        # self.postprocess1 = Linear(model_dim["hidden_conv_2"], model_dim["output_dim"])
 
         self.dropout = dropout
         self.update = update
@@ -69,11 +61,8 @@ class ROLANDGNN(torch.nn.Module):
                                     
         
     def reset_parameters(self):
-        self.preprocess1.reset_parameters()
-        self.preprocess2.reset_parameters()
         self.conv1.reset_parameters()
         self.conv2.reset_parameters()
-        # self.postprocess1.reset_parameters()
 
     def forward(self, x, edge_index, previous_embeddings=None, num_current_edges=None, num_previous_edges=None):
         
@@ -87,25 +76,16 @@ class ROLANDGNN(torch.nn.Module):
         
         current_embeddings = [torch.Tensor([]), torch.Tensor([])]
         
-        #Preprocess text
-        h = self.preprocess1(x)
-        h = F.leaky_relu(h, inplace=True)
-        h = F.dropout(h, p=self.dropout, inplace=True)
-
-        h = self.preprocess2(h)
-        h = F.leaky_relu(h,inplace=True)
-        h = F.dropout(h, p=self.dropout, inplace=True)
-        
         #GRAPHCONV
         #GraphConv1
-        h = self.conv1(h, edge_index)
-        h = F.leaky_relu(h, inplace=True)
-        h = F.dropout(h, p=self.dropout, inplace=True)
+        h = self.conv1(x, edge_index)
+        h = F.relu(h)
+        h = F.dropout(h, p=self.dropout, training=self.training)
         #Embedding Update after first layer
         if self.update=='gru':
-            h = torch.Tensor(self.gru1(h, self.previous_embeddings[0].clone()).detach())  # .numpy()
+            h = torch.Tensor(self.gru1(h, self.previous_embeddings[0].clone().to(h.device)).detach())  # .numpy()
         elif self.update=='mlp':
-            hin = torch.cat((h, self.previous_embeddings[0].clone()), dim=1)
+            hin = torch.cat((h, self.previous_embeddings[0].clone().to(h.device)), dim=1)
             h = torch.Tensor(self.mlp1(hin).detach()) # .numpy()
         else:
             h = torch.Tensor((self.tau * self.previous_embeddings[0].clone() + (1-self.tau) * h.clone()).detach())  # .numpy()
@@ -113,17 +93,16 @@ class ROLANDGNN(torch.nn.Module):
         current_embeddings[0] = h.clone()
         #GraphConv2
         h = self.conv2(h, edge_index)
-        h = F.leaky_relu(h,inplace=True)
-        h = F.dropout(h, p=self.dropout,inplace=True)
+        h = F.relu(h)
+        h = F.dropout(h, p=self.dropout, training=self.training)
         #Embedding Update after second layer
         if self.update=='gru':
-            h = torch.Tensor(self.gru2(h, self.previous_embeddings[1].clone()).detach()) # .numpy()
+            h = torch.Tensor(self.gru2(h, self.previous_embeddings[1].clone().to(h.device)).detach()) # .numpy()
         elif self.update=='mlp':
-            hin = torch.cat((h,self.previous_embeddings[1].clone()),dim=1)
+            hin = torch.cat((h,self.previous_embeddings[1].clone().to(h.device)),dim=1)
             h = torch.Tensor(self.mlp2(hin).detach())  # .numpy()
         else:
             h = torch.Tensor((self.tau * self.previous_embeddings[1].clone() + (1-self.tau) * h.clone()).detach())  # .numpy()
-      
         current_embeddings[1] = h.clone()
     
         # NOTE: last GCNConv layer is considered as the embeddings
