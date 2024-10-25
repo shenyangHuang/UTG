@@ -54,6 +54,7 @@ parser.add_argument('--fixed_curvature', type=int, default=1, help='fixed (1) cu
 parser.add_argument('--aggregation', type=str, default='deg', help='aggregation method: [deg, att]')
 parser.add_argument('--nhid', type=int, default=16, help='dim of hidden embedding')
 parser.add_argument('--nout', type=int, default=16, help='dim of output embedding')
+parser.add_argument('--roland_update', type=str, default="gru", help="ROLAND update strategy.")
 
 args = parser.parse_args()
 

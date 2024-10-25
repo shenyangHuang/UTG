@@ -34,9 +34,6 @@ class ROLANDGNN(torch.nn.Module):
                  num_nodes, dropout=0.0, update='moving'):
         
         super(ROLANDGNN, self).__init__()
-        #Architecture: 
-            #2 GCN layer to aggregate node embeddings
-            # node embeddings are passed as outputs
         
         self.conv1 = GCNConv(model_dim["input_dim"], model_dim["hidden_conv_1"])
         self.conv2 = GCNConv(model_dim["hidden_conv_1"], model_dim["hidden_conv_2"])  
@@ -91,6 +88,7 @@ class ROLANDGNN(torch.nn.Module):
             h = torch.Tensor((self.tau * self.previous_embeddings[0].clone() + (1-self.tau) * h.clone()).detach())  # .numpy()
        
         current_embeddings[0] = h.clone()
+        
         #GraphConv2
         h = self.conv2(h, edge_index)
         h = F.relu(h)
