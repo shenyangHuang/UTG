@@ -1,16 +1,17 @@
 #!/bin/bash
-#SBATCH --partition=long #unkillable #main #long
-#SBATCH --output=gcn_review_2e4.txt 
-#SBATCH --error=gcn_review_2e4_error.txt 
-#SBATCH --cpus-per-task=4                     # Ask for 4 CPUs
-#SBATCH --gres=gpu:1                  # Ask for 1 titan xp gpu:rtx8000:1 
-#SBATCH --mem=64G #64G                             # Ask for 32 GB of RAM
-#SBATCH --time=72:00:00    #48:00:00                   # The job will run for 1 day
 
-export HOME="/home/mila/h/huangshe"
-module load python/3.9
-source $HOME/tgbenv/bin/activate
-pwd
+#SBATCH --account=def-rrabba
+#SBATCH --time=1-00:00:00           # time (DD-HH:MM)
+#SBATCH --cpus-per-task=4           # CPU cores/threads
+#SBATCH --gres=gpu:1                # number of GPU(s) per node
+#SBATCH --mem=16G                   # memory (per node)
+#SBATCH --job-name=UTG_htgn_reddit_auc_ap
+#SBATCH --output=outlog/%x-%j.log
+
+# export HOME="/home/mila/h/huangshe"
+# module load python/3.9
+# source $HOME/tgbenv/bin/activate
+# pwd
 
 
 
@@ -18,7 +19,13 @@ pwd
 
 # python utg_main_gnn.py --dataset=tgbl-wiki -t hourly --lr 2e-4 --max_epoch 500 --seed 1 --num_runs 5 --patience 50 --batch_size 200
 
-python utg_main_gnn.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20 --batch_size 2000
+# python utg_main_gnn.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20 --batch_size 2000
+
+# python ctdg_main_htgn_auc_ap.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20 --batch_size 2000
+
+python ctdg_main_htgn_auc_ap.py --model=HTGN --dataset=tgbl-reddit -t hourly --lr 1e-3 --max_epoch 200 --num_runs 5 --patience 50 --seed 1
+
+python ctdg_main_htgn_auc_ap.py --model=HTGN --dataset=tgbl-reddit -t hourly --lr 2e-4 --max_epoch 200 --num_runs 5 --patience 50 --seed 1
 
 
 

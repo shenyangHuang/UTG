@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task=4           # CPU cores/threads
 #SBATCH --gres=gpu:1                # number of GPU(s) per node
 #SBATCH --mem=16G                   # memory (per node)
-#SBATCH --job-name=UTG_wiki_roland_Oct24_1e-3_5
+#SBATCH --job-name=UTG_roland_auc_ap_2e-4_reddit
 #SBATCH --output=outlog/%x-%j.log
 
 
@@ -15,17 +15,17 @@
 # -----------------------------------------------------------
 
 # # ===================== Data
-# tgbl-wiki
-data="tgbl-wiki"
-time_scale="hourly"
+# # tgbl-wiki
+# data="tgbl-wiki"
+# time_scale="hourly"
 
 # # tgbl-review
 # data="tgbl-review"
 # time_scale="monthly"
 
-# # tgbl-subreddit
-# data="tgbl-subreddit"
-# time_scale="hourly"
+# tgbl-subreddit
+data="tgbl-subreddit"
+time_scale="hourly"
 
 # # tgbl-lastfm
 # data="tgbl-lastfm"
@@ -45,12 +45,12 @@ max_epoch=200
 patience=50
 num_runs=1
 
-lr=1e-3
-# lr=2e-4
+# lr=1e-3
+lr=2e-4
 
 # lr=1e-4
 
-min_seed=5
+min_seed=1
 max_seed=6
 
 
@@ -105,6 +105,14 @@ do
         echo "======================================"
         # ------------- ROLAND-DGNN -------------
         python -u ctdg_roland_dgnn.py --model="$model" --dataset="$data" -t "$time_scale" \
+        --lr "$lr" --max_epoch "$max_epoch" --num_runs "$num_runs" --patience "$patience" --seed "$seed"
+
+    elif [ "$model" = "ROLAND_DGNN_AUC_AP" ]; then
+        echo "======================================"
+        echo "================= ROLAND_DGNN ================="
+        echo "======================================"
+        # ------------- ROLAND-DGNN---AUC-AP -------------
+        python -u ctdg_roland_dgnn_auc_ap.py --model="$model" --dataset="$data" -t "$time_scale" \
         --lr "$lr" --max_epoch "$max_epoch" --num_runs "$num_runs" --patience "$patience" --seed "$seed"
 
     else
