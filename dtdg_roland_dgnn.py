@@ -22,16 +22,16 @@ def test_tgb(test_data, node_feat,
              neg_sampler, evaluator,
              metric, split_mode='val'):
     
-    snapshots = test_data['edge_index'] 
-    edges = test_data['original_edges']
+    test_snapshots = test_data['edge_index'] 
+    test_edges = test_data['original_edges']
     
     encoder.eval()
     decoder.eval()
 
     perf_list = []
 
-    for snapshot_idx in snapshots.keys():
-        pos_index = torch.from_numpy(edges[snapshot_idx])
+    for snapshot_idx in test_snapshots.keys():
+        pos_index = torch.from_numpy(test_edges[snapshot_idx])
         pos_index = pos_index.long().to(args.device)
 
         for i in range(pos_index.shape[1]):
@@ -61,13 +61,13 @@ def test_tgb(test_data, node_feat,
 
         # these are the previous snapshot parameters, update before a new prediction
         # computer new number of edges
-        num_current_edges = len(pos_src)
+        num_current_edges = pos_index.shape[1]
         num_previous_edges = num_previous_edges + num_current_edges
         # update last-embeddings for the next round
         last_embeddings = current_embeddings
         
         #* update the model now if the prediction batch has moved to next snapshot
-        cur_index = snapshots[snapshot_idx]
+        cur_index = test_snapshots[snapshot_idx]
         cur_index = cur_index.long().to(args.device)
         current_embeddings = encoder(node_feat, cur_index, \
                 last_embeddings, num_current_edges, num_previous_edges)
@@ -200,21 +200,21 @@ if __name__ == '__main__':
                 total_loss += loss.item() / pos_index.shape[1]
 
             train_time = timeit.default_timer() - train_start_time
-            train_time = timeit.default_timer() - train_start_time
             print (f'INFO: Epoch {epoch}/{num_epochs}, Loss: {total_loss}')
             print ("INFO: Train time: ", train_time)
 
+
             # VALIDATION
-            evaluator = Evaluator(name=args.dataset) #reuse MRR evaluator from TGB
+            evaluator = Evaluator(name="tgbl-wiki") #reuse MRR evaluator from TGB
             metric = "mrr"
             neg_sampler = NegativeEdgeSampler(dataset_name=args.dataset, strategy="hist_rnd")
 
             #* load the val negative samples
             neg_sampler.load_eval_set(fname=f"data/{args.dataset}/{args.dataset}_val_ns.pkl", split_mode="val")
+            # neg_sampler.load_eval_set(fname=f"{args.dataset}_val_ns.pkl", split_mode="val")
 
             val_start_time = timeit.default_timer()
-
-            test_tgb(test_data, node_feat,
+            test_tgb(val_data, node_feat,
              encoder, decoder, 
              current_embeddings, num_previous_edges,
              neg_sampler, evaluator,
@@ -237,6 +237,7 @@ if __name__ == '__main__':
             if (val_metric > best_val):
                 best_val = val_metric
                 neg_sampler.load_eval_set(fname=f"data/{args.dataset}/{args.dataset}_test_ns.pkl", split_mode="test",)
+                # neg_sampler.load_eval_set(fname=f"{args.dataset}_test_ns.pkl", split_mode="test",)
 
                 test_start_time = timeit.default_timer()
 
