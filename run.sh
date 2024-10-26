@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=long #unkillable #main #long
-#SBATCH --output=htgn_wiki_4daily.txt 
-#SBATCH --error=htgn_wiki_4daily_error.txt 
+#SBATCH --output=gclstm_wiki_4daily.txt 
+#SBATCH --error=gclstm_wiki_4daily_error.txt 
 #SBATCH --cpus-per-task=4                     # Ask for 4 CPUs
 #SBATCH --gres=gpu:1                  # Ask for 1 titan xp gpu:rtx8000:1 
 #SBATCH --mem=32G #64G                             # Ask for 32 GB of RAM
@@ -11,6 +11,16 @@ export HOME="/home/mila/h/huangshe"
 module load python/3.9
 source $HOME/tgbenv/bin/activate
 pwd
+
+#* running coin
+# CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --seed 5 --dataset=tgbl-coin -t hourly --lr 0.001 --max_epoch 50 --num_runs 1 --patience 5
+
+# CUDA_VISIBLE_DEVICES=0 python -u ctdg_utg_gcn.py --dataset=tgbl-coin --seed 5 -t hourly --lr 1e-3 --max_epoch 50 --num_runs 1 --patience 5 --batch_size 1000
+
+# CUDA_VISIBLE_DEVICES=0 python -u ctdg_gclstm.py --dataset=tgbl-coin --seed 5 -t hourly --lr 2e-4 --max_epoch 50 --num_runs 1 --patience 5 --batch_size 200
+
+# CUDA_VISIBLE_DEVICES=0 python -u ctdg_egcno.py --dataset=tgbl-coin --seed 5 -t hourly --lr 1e-3 --max_epoch 50 --num_runs 1 --patience 5 --batch_size 200
+
 
 
 #* for GCN
@@ -47,7 +57,7 @@ pwd
 
 # CUDA_VISIBLE_DEVICES=0 python -u dtdg_gclstm.py --dataset contacts -t hourly --lr 2e-4 --max_epoch 200 --num_runs 5 --patience 50
 
-# CUDA_VISIBLE_DEVICES=0 python -u ctdg_gclstm.py --dataset=tgbl-wiki -t hourly --lr 2e-4 --max_epoch 500 --seed 1 --num_runs 5 --patience 50 --batch_size 200
+CUDA_VISIBLE_DEVICES=0 python -u ctdg_gclstm.py --dataset=tgbl-wiki -t 4daily --lr 2e-4 --max_epoch 500 --seed 1 --num_runs 5 --patience 50 --batch_size 200
 
 # CUDA_VISIBLE_DEVICES=0 python -u ctdg_gclstm.py --dataset=tgbl-review -t monthly --lr 2e-4 --max_epoch 200 --seed 1 --num_runs 5 --patience 20 --batch_size 200
 
@@ -76,7 +86,7 @@ pwd
 
 #* for HTGN
 
-# CUDA_VISIBLE_DEVICES=0 python -u dtdg_main_htgn.py --model=HTGN --dataset=enron -t monthly --lr 2e-4 --max_epoch 500 --num_runs 5 --patience 100
+# CUDA_VISIBLE_DEVICES=0 python -u dtdg_main_htgn.py --model=HTGN --dataset=enron --window_size=1 -t monthly --lr 2e-4 --max_epoch 500 --num_runs 5 --patience 100
 
 # CUDA_VISIBLE_DEVICES=0 python -u dtdg_main_htgn.py --model=HTGN --dataset=uci -t weekly --lr 2e-4 --max_epoch 500 --num_runs 5 --patience 100
 
@@ -86,11 +96,11 @@ pwd
 
 # CUDA_VISIBLE_DEVICES=0 python -u dtdg_main_htgn.py --model=HTGN --dataset contacts -t hourly --lr 2e-4 --max_epoch 500 --num_runs 5 --patience 100
 
-CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --dataset=tgbl-wiki -t 4daily --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
+# CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --window_size=1 --dataset=tgbl-wiki -t hourly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
 
 # CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --dataset=tgbl-review -t monthly --lr 0.001 --max_epoch 500 --num_runs 5 --patience 100
 
-# CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --dataset=tgbl-coin -t hourly --lr 0.001 --max_epoch 50 --num_runs 5 --patience 5
+# CUDA_VISIBLE_DEVICES=0 python -u ctdg_main_htgn.py --model=HTGN --dataset=tgbl-coin -t daily --lr 0.001 --max_epoch 50 --num_runs 5 --patience 5
 
 
 
