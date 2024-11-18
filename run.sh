@@ -13,6 +13,19 @@ source $HOME/tgbenv/bin/activate
 pwd
 
 
+
+#* for ROLAND
+
+# CUDA_VISIBLE_DEVICES=0 python -u dtdg_roland_dgnn.py -d enron -t monthly --lr 2e-4 --max_epoch 100 --seed 1 --num_runs 5 --patience 20
+
+# CUDA_VISIBLE_DEVICES=0 python -u dtdg_roland_dgnn.py --dataset=uci -t weekly --lr 2e-4 --max_epoch 100 --seed 1 --num_runs 1 --patience 20
+
+# CUDA_VISIBLE_DEVICES=0 python -u dtdg_roland_dgnn.py --dataset=mooc -t daily --lr 2e-4 --max_epoch 100 --seed 1 --num_runs 1 --patience 20
+
+# CUDA_VISIBLE_DEVICES=0 python -u dtdg_roland_dgnn.py --dataset=social_evo -t daily --lr 2e-4 --max_epoch 100 --seed 1 --num_runs 1 --patience 20
+
+# CUDA_VISIBLE_DEVICES=0 python -u dtdg_roland_dgnn.py --dataset=contacts -t hourly --lr 2e-4 --max_epoch 100 --seed 1 --num_runs 1 --patience 20
+
 #* for GCN
 
 # CUDA_VISIBLE_DEVICES=0 python -u ctdg_utg_gcn.py --dataset=tgbl-wiki -t hourly --lr 1e-3 --max_epoch 500 --seed 1 --num_runs 5 --patience 50 --batch_size 200
