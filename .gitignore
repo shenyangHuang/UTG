@@ -172,3 +172,4 @@ cython_debug/
 
 # local files
 evaluation_with_auc_ap/
+cc_env.sh
