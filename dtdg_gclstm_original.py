@@ -1,26 +1,36 @@
 import torch
 import numpy as np
 import torch.nn.functional as F
-from torch_geometric_temporal.nn.recurrent import EvolveGCNO
+from torch_geometric_temporal.nn.recurrent import GCLSTM 
 from torch_geometric.utils.negative_sampling import negative_sampling
+# from models.tgn.decoder import LinkPredictor
 from tgb.linkproppred.evaluate import Evaluator
 from tgb.linkproppred.negative_sampler import NegativeEdgeSampler
 import wandb
 import timeit
 
-#https://github.com/benedekrozemberczki/pytorch_geometric_temporal/blob/master/examples/recurrent/evolvegcno_example.py
+
+
 class RecurrentGCN(torch.nn.Module):
-    def __init__(self, node_feat_dim, hidden_dim):
+    def __init__(self, node_feat_dim, hidden_dim, K=1):
+        #https://pytorch-geometric-temporal.readthedocs.io/en/latest/modules/root.html#recurrent-graph-convolutional-layers
         super(RecurrentGCN, self).__init__()
-        self.recurrent = EvolveGCNO(node_feat_dim)
-        self.linear = torch.nn.Linear(node_feat_dim, hidden_dim)
+        self.recurrent = GCLSTM(in_channels=node_feat_dim, 
+                                out_channels=hidden_dim, 
+                                K=K,) #K is the Chebyshev filter size
+        self.linear = torch.nn.Linear(hidden_dim, hidden_dim)
 
-    def forward(self, x, edge_index, edge_weight):
-        h = self.recurrent(x, edge_index, edge_weight)
-        h = F.relu(h)
+    def forward(self, x, edge_index, edge_weight, h, c):
+        r"""
+        forward function for the model, 
+        this is used for each snapshot
+        h: node hidden state matrix from previous time
+        c: cell state matrix from previous time
+        """
+        h_0, c_0 = self.recurrent(x, edge_index, edge_weight, h, c)
+        h = F.relu(h_0)
         h = self.linear(h)
-        return h
-
+        return h, h_0, c_0
 
 
 class LinkPredictor(torch.nn.Module):
@@ -68,7 +78,7 @@ if __name__ == '__main__':
             # track hyperparameters and run metadata
             config={
             "learning_rate": args.lr,
-            "architecture": "egcno",
+            "architecture": "gclstm",
             "dataset": args.dataset,
             "time granularity": args.time_scale,
             }
@@ -92,15 +102,18 @@ if __name__ == '__main__':
         print (f"Run {seed}")
         
         #* initialization of the model to prep for training
-        model = RecurrentGCN(node_feat_dim=node_feat_dim, hidden_dim=hidden_dim).to(args.device)
+        model = RecurrentGCN(node_feat_dim=node_feat_dim, hidden_dim=hidden_dim, K=1).to(args.device)
+        # node_feat = torch.zeros((num_nodes, node_feat_dim)).to(args.device)
         node_feat = torch.randn((num_nodes, node_feat_dim)).to(args.device)
 
+        # link_pred = LinkPredictor(in_channels=hidden_dim).to(args.device)
         link_pred = LinkPredictor(hidden_dim, hidden_dim, 1,
                                 2, 0.2).to(args.device)
 
 
         optimizer = torch.optim.Adam(
             set(model.parameters()) | set(link_pred.parameters()), lr=lr)
+        # criterion = torch.nn.BCEWithLogitsLoss()
         criterion = torch.nn.MSELoss()
 
         best_val = 0
@@ -115,30 +128,22 @@ if __name__ == '__main__':
             model.train()
             link_pred.train()
             snapshot_list = train_data['edge_index']
-            h = None 
+            h_0, c_0, h = None, None, None
             total_loss = 0
+
+            optimizer.zero_grad()
+            loss = 0
+
+
             for snapshot_idx in range(train_data['time_length']):
-
-                optimizer.zero_grad()
-                # neg_edges = negative_sampling(pos_index, num_nodes=num_nodes, num_neg_samples=(pos_index.size(1)*1), force_undirected = True)
-                if (snapshot_idx == 0): #first snapshot, feed the current snapshot
-                    cur_index = snapshot_list[snapshot_idx]
-                    cur_index = cur_index.long().to(args.device)
-                    # TODO, also need to support edge attributes correctly in TGX
-                    if ('edge_attr' not in train_data):
-                        edge_attr = torch.ones(cur_index.size(1), edge_feat_dim).to(args.device)
-                    else:
-                        raise NotImplementedError("Edge attributes are not yet supported")
-                    h = model(node_feat, cur_index, edge_attr)
-                else: #subsequent snapshot, feed the previous snapshot
-                    prev_index = snapshot_list[snapshot_idx-1]
-                    prev_index = prev_index.long().to(args.device)
-                    if ('edge_attr' not in train_data):
-                        edge_attr = torch.ones(prev_index.size(1), edge_feat_dim).to(args.device)
-                    else:
-                        raise NotImplementedError("Edge attributes are not yet supported")
-                    h = model(node_feat, prev_index, edge_attr)
-
+                cur_index = snapshot_list[snapshot_idx]
+                cur_index = cur_index.long().to(args.device)
+                # TODO, also need to support edge attributes correctly in TGX
+                if ('edge_attr' not in train_data):
+                    edge_attr = torch.ones(cur_index.size(1), edge_feat_dim).to(args.device)
+                else:
+                    raise NotImplementedError("Edge attributes are not yet supported")
+                h, h_0, c_0 = model(node_feat, cur_index, edge_attr, h_0, c_0)
                 pos_index = snapshot_list[snapshot_idx]
                 pos_index = pos_index.long().to(args.device)
 
@@ -153,17 +158,19 @@ if __name__ == '__main__':
                 pos_out = link_pred(h[pos_index[0]], h[pos_index[1]])
                 neg_out = link_pred(h[pos_index[0]], h[neg_dst])
 
-                loss = criterion(pos_out, torch.ones_like(pos_out))
+                loss += criterion(pos_out, torch.ones_like(pos_out))
                 loss += criterion(neg_out, torch.zeros_like(neg_out))
 
-                loss.backward(retain_graph=True)
-                optimizer.step()
+                total_loss += (float(loss) / pos_index.shape[1])
 
-                total_loss += float(loss)
-            num_snapshots = train_data['time_length']
-            print (f'Epoch {epoch}/{num_epochs}, Loss: {total_loss/num_snapshots}')
+            loss.backward()
+            optimizer.step()
+            print (f'Epoch {epoch}/{num_epochs}, Loss: {total_loss}')
 
             train_time = timeit.default_timer() - train_start_time
+            #! Evaluation starts here
+            #! need to optimize code to have train, test function, maybe in a class
+
             val_start_time = timeit.default_timer()
             model.eval()
             link_pred.eval()
@@ -177,10 +184,13 @@ if __name__ == '__main__':
             val_snapshots = val_data['edge_index'] #converted to undirected, also removes self loops as required by HTGN
             val_edges = val_data['original_edges'] #original edges unmodified
             ts_min = min(val_snapshots.keys())
+
+            h_0 = h_0.detach()
+            c_0 = c_0.detach()
+            h = h.detach()
+
             perf_list = {}
             perf_idx = 0
-
-            h = h.detach()
 
             for snapshot_idx in val_snapshots.keys():
                 pos_index = torch.from_numpy(val_edges[snapshot_idx]) # (2,-1)
@@ -218,7 +228,7 @@ if __name__ == '__main__':
                     edge_attr = torch.ones(prev_index.size(1), edge_feat_dim).to(args.device)
                 else:
                     raise NotImplementedError("Edge attributes are not yet supported")
-                h = model(node_feat, prev_index, edge_attr).detach()
+                h, h_0, c_0 = model(node_feat, prev_index, edge_attr, h_0, c_0)
 
 
             result = list(perf_list.values())
@@ -229,7 +239,7 @@ if __name__ == '__main__':
             print(f"Val {metric}: {val_metrics}")
             print ("Val time: ", val_time)
             if (args.wandb):
-                wandb.log({"train_loss":(total_loss/num_nodes),
+                wandb.log({"train_loss":(total_loss),
                         "val_" + metric: val_metrics,
                         "train time": train_time,
                         "val time": val_time,
@@ -248,6 +258,9 @@ if __name__ == '__main__':
                 test_snapshots = test_data['edge_index'] #converted to undirected, also removes self loops as required by HTGN
                 test_edges = test_data['original_edges'] #original edges unmodified
                 ts_min = min(test_snapshots.keys())
+
+                h_0 = h_0.detach()
+                c_0 = c_0.detach()
                 h = h.detach()
 
                 perf_list = {}
@@ -288,7 +301,7 @@ if __name__ == '__main__':
                         edge_attr = torch.ones(prev_index.size(1), edge_feat_dim).to(args.device)
                     else:
                         raise NotImplementedError("Edge attributes are not yet supported")
-                    h = model(node_feat, prev_index, edge_attr)
+                    h, h_0, c_0 = model(node_feat, prev_index, edge_attr, h_0, c_0)
 
                 result = list(perf_list.values())
                 perf_list = np.array(result)
@@ -302,17 +315,23 @@ if __name__ == '__main__':
                 #* implementing patience
                 if ((epoch - best_epoch) >= args.patience and epoch > 1):
                     best_epoch = epoch
+                    print ("------------------------------------------")
+                    print ("------------------------------------------")
                     print ("run finishes")
                     print ("best epoch is, ", best_epoch)
                     print ("best val performance is, ", best_val)
                     print ("best test performance is, ", best_test)
                     print ("------------------------------------------")
+                    print ("------------------------------------------")
                     break
                 best_epoch = epoch
+        print ("------------------------------------------")
+        print ("------------------------------------------")
         print ("run finishes")
         print ("best epoch is, ", best_epoch)
         print ("best val performance is, ", best_val)
         print ("best test performance is, ", best_test)
+        print ("------------------------------------------")
         print ("------------------------------------------")
 
 
