@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #SBATCH --account=def-rrabba
-#SBATCH --time=1-00:00:00           # time (DD-HH:MM)
+#SBATCH --time=3-00:00:00           # time (DD-HH:MM)
 #SBATCH --cpus-per-task=4           # CPU cores/threads
 #SBATCH --gres=gpu:1                # number of GPU(s) per node
 #SBATCH --mem=16G                   # memory (per node)
-#SBATCH --job-name=UTG_roland_auc_ap_2e-4_reddit
+#SBATCH --job-name=UTG_roland_contacts_2e-4_5
 #SBATCH --output=outlog/%x-%j.log
 
 
@@ -14,7 +14,7 @@
 # --------------- Dataset & Time-granularity ----------------
 # -----------------------------------------------------------
 
-# # ===================== Data
+# # ===================== Data --- CTDG
 # # tgbl-wiki
 # data="tgbl-wiki"
 # time_scale="hourly"
@@ -23,13 +23,35 @@
 # data="tgbl-review"
 # time_scale="monthly"
 
-# tgbl-subreddit
-data="tgbl-subreddit"
-time_scale="hourly"
+# # tgbl-subreddit
+# data="tgbl-subreddit"
+# time_scale="hourly"
 
 # # tgbl-lastfm
 # data="tgbl-lastfm"
 # time_scale="weekly"
+
+
+# # ===================== Data --- DTDG
+# # uci
+# data="uci"
+# time_scale="weekly"
+
+# # enron
+# data="enron"
+# time_scale="monthly"
+
+# # mooc
+# data="mooc"
+# time_scale="daily"
+
+# # social_evo
+# data="social_evo"
+# time_scale="daily"
+
+# contacts
+data="contacts"
+time_scale="hourly"
 
 # # =====================
 
@@ -38,6 +60,7 @@ time_scale="hourly"
 # model="GCLSTM"
 # model="EGCNO"
 # model="GCN"
+# model="ROLAND_DGNN_DT"
 model="ROLAND_DGNN"
 # # =====================
 
@@ -50,8 +73,8 @@ lr=2e-4
 
 # lr=1e-4
 
-min_seed=1
-max_seed=6
+min_seed=4
+max_seed=5
 
 
 for ((seed=$min_seed; seed<$max_seed; seed++))
@@ -107,12 +130,12 @@ do
         python -u ctdg_roland_dgnn.py --model="$model" --dataset="$data" -t "$time_scale" \
         --lr "$lr" --max_epoch "$max_epoch" --num_runs "$num_runs" --patience "$patience" --seed "$seed"
 
-    elif [ "$model" = "ROLAND_DGNN_AUC_AP" ]; then
+    elif [ "$model" = "ROLAND_DGNN_DT" ]; then
         echo "======================================"
-        echo "================= ROLAND_DGNN ================="
+        echo "================= ROLAND_DGNN_DT ================="
         echo "======================================"
-        # ------------- ROLAND-DGNN---AUC-AP -------------
-        python -u ctdg_roland_dgnn_auc_ap.py --model="$model" --dataset="$data" -t "$time_scale" \
+        # ------------- ROLAND_DGNN_DT -------------
+        python -u dtdg_roland_dgnn.py --model="$model" --dataset="$data" -t "$time_scale" \
         --lr "$lr" --max_epoch "$max_epoch" --num_runs "$num_runs" --patience "$patience" --seed "$seed"
 
     else
