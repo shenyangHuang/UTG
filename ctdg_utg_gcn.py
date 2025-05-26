@@ -336,56 +336,56 @@ def run(args, data, seed=1):
         print(f"Epoch: {epoch:02d}, Loss: {(total_loss):.4f}, Training elapsed Time (s): {train_time: .4f}")
         print ("training loss is ", total_loss)
 
-        val_snapshots = data['val_data']['edge_index']
-        ts_list = data['val_data']['ts_map']
-        val_loader = TemporalDataLoader(val_data, batch_size=batch_size)
-        evaluator = Evaluator(name=args.dataset)
-        neg_sampler = dataset.negative_sampler
-        dataset.load_val_ns()
+        # val_snapshots = data['val_data']['edge_index']
+        # ts_list = data['val_data']['ts_map']
+        # val_loader = TemporalDataLoader(val_data, batch_size=batch_size)
+        # evaluator = Evaluator(name=args.dataset)
+        # neg_sampler = dataset.negative_sampler
+        # dataset.load_val_ns()
 
-        start_epoch_val = timeit.default_timer()
-        val_metrics, embeddings = test_tgb(embeddings, val_loader, val_snapshots, ts_list,
-             node_feat,encoder, decoder,neg_sampler,evaluator,metric, split_mode='val')
-        val_time = timeit.default_timer() - start_epoch_val
+        # start_epoch_val = timeit.default_timer()
+        # val_metrics, embeddings = test_tgb(embeddings, val_loader, val_snapshots, ts_list,
+        #      node_feat,encoder, decoder,neg_sampler,evaluator,metric, split_mode='val')
+        # val_time = timeit.default_timer() - start_epoch_val
 
-        print ("validation metrics is ", val_metrics)
-        print ("val elapsed time is ", val_time)
+        # print ("validation metrics is ", val_metrics)
+        # print ("val elapsed time is ", val_time)
 
-        if (args.wandb):
-            wandb.log({"train_loss":(total_loss / train_data.num_events),
-                        "val_" + metric: val_metrics,
-                        "train time": train_time,
-                        "val time": val_time,
-                        })
+        # if (args.wandb):
+        #     wandb.log({"train_loss":(total_loss / train_data.num_events),
+        #                 "val_" + metric: val_metrics,
+        #                 "train time": train_time,
+        #                 "val time": val_time,
+        #                 })
         
-        if (val_metrics > best_val):
-            dataset.load_test_ns()
-            test_snapshots = data['test_data']['edge_index']
-            ts_list = data['test_data']['ts_map']
-            test_loader = TemporalDataLoader(test_data, batch_size=batch_size)
-            neg_sampler = dataset.negative_sampler
-            dataset.load_test_ns()
+        # if (val_metrics > best_val):
+        #     dataset.load_test_ns()
+        #     test_snapshots = data['test_data']['edge_index']
+        #     ts_list = data['test_data']['ts_map']
+        #     test_loader = TemporalDataLoader(test_data, batch_size=batch_size)
+        #     neg_sampler = dataset.negative_sampler
+        #     dataset.load_test_ns()
 
-            test_start_time = timeit.default_timer()
-            test_metrics, embeddings = test_tgb(embeddings, test_loader, test_snapshots, ts_list,
-             node_feat,encoder, decoder,neg_sampler,evaluator,metric, split_mode='test')
-            test_time = timeit.default_timer() - test_start_time
-            best_val = val_metrics
-            best_test = test_metrics
+        #     test_start_time = timeit.default_timer()
+        #     test_metrics, embeddings = test_tgb(embeddings, test_loader, test_snapshots, ts_list,
+        #      node_feat,encoder, decoder,neg_sampler,evaluator,metric, split_mode='test')
+        #     test_time = timeit.default_timer() - test_start_time
+        #     best_val = val_metrics
+        #     best_test = test_metrics
 
-            print ("test metric is ", test_metrics)
-            print ("test elapsed time is ", test_time)
-            print ("--------------------------------")
+        #     print ("test metric is ", test_metrics)
+        #     print ("test elapsed time is ", test_time)
+        #     print ("--------------------------------")
 
-            if ((epoch - best_epoch) >= args.patience and epoch > 1):
-                best_epoch = epoch
-                break
-            best_epoch = epoch
+        #     if ((epoch - best_epoch) >= args.patience and epoch > 1):
+        #         best_epoch = epoch
+        #         break
+        #     best_epoch = epoch
     
-    print ("run finishes")
-    print ("best epoch is, ", best_epoch)
-    print ("best val performance is, ", best_val)
-    print ("best test performance is, ", best_test)
+    # print ("run finishes")
+    # print ("best epoch is, ", best_epoch)
+    # print ("best val performance is, ", best_val)
+    # print ("best test performance is, ", best_test)
 
 
 
