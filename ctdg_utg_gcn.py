@@ -253,6 +253,10 @@ def run(args, data, seed=1):
 
     #ctdg dataset
     dataset = PyGLinkPropPredDataset(name=args.dataset, root="datasets")
+
+
+    load_start = timeit.default_timer()
+
     full_data = dataset.get_TemporalData()
     full_data = full_data.to(args.device)
     #get masks
@@ -297,9 +301,8 @@ def run(args, data, seed=1):
     best_val = 0
     best_test = 0
 
-
-    #! train with snapshots or train with batches of edges??????
-    
+    load_end = timeit.default_timer()
+    print ("Data loading time: ", load_end - load_start)
     
 
     for epoch in range(1, args.max_epoch + 1):
