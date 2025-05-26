@@ -240,6 +240,7 @@ if __name__ == '__main__':
         for epoch in range(num_epochs):
             print ("------------------------------------------")
             train_start_time = timeit.default_timer()
+            
             optimizer.zero_grad()
             total_loss = 0
             model.train()
