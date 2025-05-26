@@ -36,6 +36,12 @@ git fetch origin
 git checkout -b [branch] origin/[branch]
 ```
 
+## OpenDG Benchmarking
+
+```
+python ctdg_utg_gcn.py --dataset=tgbl-lastfm -t weekly --lr 2e-4 --max_epoch 10 --seed 1 --num_runs 5 --patience 10 --batch_size 200
+```
+
 
 ## Workflow
 
