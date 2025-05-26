@@ -1,8 +1,8 @@
 import torch
 import numpy as np
 import torch.nn.functional as F
-from torch_geometric_temporal.nn.recurrent import GCLSTM 
-from torch_geometric.utils.negative_sampling import negative_sampling
+from models.gc_lstm import GCLSTM
+
 from tgb.linkproppred.evaluate import Evaluator
 from tgb.linkproppred.negative_sampler import NegativeEdgeSampler
 from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
@@ -10,7 +10,6 @@ from torch_geometric.loader import TemporalDataLoader
 
 import wandb
 import timeit
-
 
 
 class RecurrentGCN(torch.nn.Module):
@@ -301,52 +300,52 @@ if __name__ == '__main__':
             print (f'Epoch {epoch}/{num_epochs}, Loss: {total_loss}')
             print ("Pure Train time: ", train_time)
             
-            #? Evaluation starts here
-            val_snapshots = data['val_data']['edge_index']
-            ts_list = data['val_data']['ts_map']
-            val_loader = TemporalDataLoader(val_edges, batch_size=batch_size)
-            evaluator = Evaluator(name=args.dataset)
-            neg_sampler = dataset.negative_sampler
-            dataset.load_val_ns()
+            # #? Evaluation starts here
+            # val_snapshots = data['val_data']['edge_index']
+            # ts_list = data['val_data']['ts_map']
+            # val_loader = TemporalDataLoader(val_edges, batch_size=batch_size)
+            # evaluator = Evaluator(name=args.dataset)
+            # neg_sampler = dataset.negative_sampler
+            # dataset.load_val_ns()
 
-            start_epoch_val = timeit.default_timer()
-            val_metrics, h, h_0, c_0 = test_tgb(h, h_0, c_0, val_loader, val_snapshots, ts_list,
-                node_feat,model, link_pred,neg_sampler,evaluator,metric, split_mode='val')
-            val_time = timeit.default_timer() - start_epoch_val
-            print(f"Val {metric}: {val_metrics}")
-            print ("Val time: ", val_time)
-            if (args.wandb):
-                wandb.log({"train_loss":(total_loss),
-                        "val_" + metric: val_metrics,
-                        "train time": train_time,
-                        "val time": val_time,
-                        })
+            # start_epoch_val = timeit.default_timer()
+            # val_metrics, h, h_0, c_0 = test_tgb(h, h_0, c_0, val_loader, val_snapshots, ts_list,
+            #     node_feat,model, link_pred,neg_sampler,evaluator,metric, split_mode='val')
+            # val_time = timeit.default_timer() - start_epoch_val
+            # print(f"Val {metric}: {val_metrics}")
+            # print ("Val time: ", val_time)
+            # if (args.wandb):
+            #     wandb.log({"train_loss":(total_loss),
+            #             "val_" + metric: val_metrics,
+            #             "train time": train_time,
+            #             "val time": val_time,
+            #             })
                 
-            #! report test results when validation improves
-            if (val_metrics > best_val):
-                dataset.load_test_ns()
-                test_snapshots = data['test_data']['edge_index']
-                ts_list = data['test_data']['ts_map']
-                test_loader = TemporalDataLoader(test_edges, batch_size=batch_size)
-                neg_sampler = dataset.negative_sampler
-                dataset.load_test_ns()
+            # #! report test results when validation improves
+            # if (val_metrics > best_val):
+            #     dataset.load_test_ns()
+            #     test_snapshots = data['test_data']['edge_index']
+            #     ts_list = data['test_data']['ts_map']
+            #     test_loader = TemporalDataLoader(test_edges, batch_size=batch_size)
+            #     neg_sampler = dataset.negative_sampler
+            #     dataset.load_test_ns()
 
-                test_start_time = timeit.default_timer()
-                test_metrics, h, h_0, c_0 = test_tgb(h, h_0, c_0, test_loader, test_snapshots, ts_list,
-                node_feat,model, link_pred,neg_sampler,evaluator,metric, split_mode='test')
-                test_time = timeit.default_timer() - test_start_time
-                best_val = val_metrics
-                best_test = test_metrics
+            #     test_start_time = timeit.default_timer()
+            #     test_metrics, h, h_0, c_0 = test_tgb(h, h_0, c_0, test_loader, test_snapshots, ts_list,
+            #     node_feat,model, link_pred,neg_sampler,evaluator,metric, split_mode='test')
+            #     test_time = timeit.default_timer() - test_start_time
+            #     best_val = val_metrics
+            #     best_test = test_metrics
 
-                print ("test metric is ", test_metrics)
-                print ("test elapsed time is ", test_time)
-                print ("--------------------------------")
-                if ((epoch - best_epoch) >= args.patience and epoch > 1):
-                    best_epoch = epoch
-                    break
-                best_epoch = epoch
-        print ("run finishes")
-        print ("best epoch is, ", best_epoch)
-        print ("best val performance is, ", best_val)
-        print ("best test performance is, ", best_test)
-        print ("------------------------------------------")
+            #     print ("test metric is ", test_metrics)
+            #     print ("test elapsed time is ", test_time)
+            #     print ("--------------------------------")
+            #     if ((epoch - best_epoch) >= args.patience and epoch > 1):
+            #         best_epoch = epoch
+            #         break
+            #     best_epoch = epoch
+        # print ("run finishes")
+        # print ("best epoch is, ", best_epoch)
+        # print ("best val performance is, ", best_val)
+        # print ("best test performance is, ", best_test)
+        # print ("------------------------------------------")
