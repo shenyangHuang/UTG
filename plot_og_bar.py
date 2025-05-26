@@ -12,7 +12,8 @@ data = pd.DataFrame({
 
 # Create grouped bar plot
 sns.barplot(data=data, x='Dataset', y='Time', hue='Method')
-plt.ylabel('Score')
+plt.ylabel('Time')
 plt.xlabel('Dataset')
+plt.yscale('log')
 plt.legend()
 plt.savefig('discretizationc_bar.pdf',bbox_inches='tight')
