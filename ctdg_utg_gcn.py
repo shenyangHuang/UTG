@@ -9,7 +9,6 @@ import sys
 import timeit
 import torch
 import numpy as np
-from torch_geometric.utils.negative_sampling import negative_sampling
 from tgb.linkproppred.evaluate import Evaluator
 from tgb.linkproppred.dataset_pyg import PyGLinkPropPredDataset
 
