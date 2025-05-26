@@ -283,8 +283,13 @@ def run(args, data, seed=1):
         node_feat = torch.randn((full_data.num_nodes,num_feat)).to(args.device)
         num_nodes = full_data.num_nodes
 
+    args.hidden_channels = 128
+    args.num_layers = 2
+    args.dropout = 0.0
 
+    # encoder = GCN(in_channels=num_feat, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
     encoder = GCN(in_channels=num_feat, hidden_channels=args.hidden_channels, out_channels=args.hidden_channels, num_layers=args.num_layers, dropout=args.dropout).to(args.device)
+
     decoder = SimpleLinkPredictor(in_channels=args.hidden_channels).to(args.device)
     optimizer = optim.Adam(set(encoder.parameters())|set(decoder.parameters()), lr=args.lr, weight_decay=args.weight_decay)
     criterion = torch.nn.MSELoss()
