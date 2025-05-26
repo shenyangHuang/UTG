@@ -160,6 +160,10 @@ if __name__ == '__main__':
 
     #ctdg dataset
     dataset = PyGLinkPropPredDataset(name=args.dataset, root="datasets")
+
+    load_start = timeit.default_timer()
+
+
     full_data = dataset.get_TemporalData()
     full_data = full_data.to(args.device)
     #get masks
@@ -202,6 +206,7 @@ if __name__ == '__main__':
     edge_feat_dim = 1
     hidden_dim = 256
 
+
     #* load the discretized version
     data = loader(dataset=args.dataset, time_scale=args.time_scale)
     train_data = data['train_data']
@@ -211,6 +216,8 @@ if __name__ == '__main__':
     num_epochs = args.max_epoch
     lr = args.lr
 
+    load_end = timeit.default_timer()
+    print ("Data loading time: ", load_end - load_start)
 
     for seed in range(args.seed, args.seed + args.num_runs):
         set_random(seed)
@@ -288,9 +295,11 @@ if __name__ == '__main__':
                 h_0 = h_0.detach()
                 c_0 = c_0.detach()
 
-            train_time = timeit.default_timer() - train_start_time
+            train_end_time = timeit.default_timer()
+
+            train_time = train_end_time - train_start_time
             print (f'Epoch {epoch}/{num_epochs}, Loss: {total_loss}')
-            print ("Train time: ", train_time)
+            print ("Pure Train time: ", train_time)
             
             #? Evaluation starts here
             val_snapshots = data['val_data']['edge_index']
